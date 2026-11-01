@@ -23,6 +23,8 @@ function defs(id) {
   <radialGradient id="${id}-glow"><stop offset="0" style="stop-color:var(--sc-lamp);stop-opacity:.9"/><stop offset="1" style="stop-color:var(--sc-lamp);stop-opacity:0"/></radialGradient>
   <radialGradient id="${id}-flame" cx=".5" cy=".75" r=".7"><stop offset="0" stop-color="#fff3c4"/><stop offset=".45" stop-color="#ffb02e"/><stop offset="1" stop-color="#e2521d" stop-opacity="0"/></radialGradient>
   <pattern id="${id}-pores" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="rgba(255,255,255,.18)"/><circle cx="6.5" cy="6" r=".8" fill="rgba(0,0,0,.25)"/></pattern>
+  <pattern id="${id}-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" class="sc-gridline"/></pattern>
+  <linearGradient id="${id}-haze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef2f5" stop-opacity="0"/><stop offset="1" stop-color="#eef2f5" stop-opacity=".55"/></linearGradient>
   <pattern id="${id}-lattice" width="8" height="10" patternUnits="userSpaceOnUse"><path d="M0 0L8 10M8 0L0 10" class="sc-lattice"/></pattern>
 
   <g id="${id}-haul">
@@ -53,7 +55,8 @@ function sky(id, ground, hills) {
   return `<rect width="${W}" height="${ground + 2}" fill="url(#${id}-sky)"/>
   <g class="sc-night">${stars}<circle cx="1290" cy="150" r="17" class="sc-moon"/><circle cx="1297" cy="145" r="15" style="fill:var(--sc-sky-top)" opacity=".85"/></g>
   <g class="sc-day"><circle cx="1290" cy="150" r="22" class="sc-sun"/></g>
-  <path d="${hills[0]}" class="sc-hill2"/><path d="${hills[1]}" class="sc-hill"/>`;
+  <rect width="${W}" height="${ground}" fill="url(#${id}-grid)" class="sc-grid"/>
+  <path d="${hills[0]}" class="sc-hill2"/><rect y="${ground - 140}" width="${W}" height="140" fill="url(#${id}-haze)" class="sc-haze"/><path d="${hills[1]}" class="sc-hill"/>`;
 }
 
 function bus() {
