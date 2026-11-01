@@ -798,3 +798,10 @@ table.vc-map tbody tr:last-child td, table.vc-map tr:has(+ tr.vc-first) td, tabl
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sc-gridline { stroke: rgba(160,190,210,.08); } }
 .sc-outline { stroke: var(--sc-outline); stroke-width: .8; }
 .sc-haze { pointer-events: none; opacity: var(--sc-day); }
+/* value at stake */
+.vc-value { margin-top: 4px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line-soft); display: grid; gap: 4px; }
+.vc-value-h { font: 600 10.5px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.vc-value-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.vc-value-v { font: 600 24px/1 var(--f-display); color: var(--ink); }
+.vc-value-was { margin-left: auto; font: 500 13px var(--f-mono); color: var(--ink-3); }
+.vc-value-was .note { text-decoration: none; }

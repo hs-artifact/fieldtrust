@@ -1099,17 +1099,26 @@ function vcShape(type) {
   return `<svg viewBox="0 0 12 12" aria-hidden="true">${p}</svg>`;
 }
 function vcStop() {
+  if (VC.io) { VC.io.disconnect(); VC.io = null; }
+  if (VC.onVis) { document.removeEventListener("visibilitychange", VC.onVis); VC.onVis = null; }
   clearInterval(VC.timer); cancelAnimationFrame(VC.raf); cancelAnimationFrame(VC.tween); cancelAnimationFrame(VC.mov);
   VC.timer = VC.raf = VC.tween = 0; VC.tour = false;
 }
 const ICON_USER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
 const ICON_SWAP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>`;
 
+const fmtUSD = v => v == null ? "—" : v >= 1e6 ? `US$${fmt(v / 1e6, 1)}M` : v >= 1e3 ? `US$${fmt(v / 1e3, 0)}k` : `US$${fmtInt(v)}`;
 function vcLive(st) {
   const key = st.handoff && st.handoff.live; if (!key) return null;
   const d = D(), s = d.gold.map(g => g[key]), now = last7(s), was = first7(s), tol = d.reconciliation.tolerance_pct;
   const cls = now <= tol ? "good" : now <= tol * 2 ? "warn" : "crit";
-  return { key, series: roll7(s), now, was, tol, cls, label: cls === "good" ? "Within tolerance" : cls === "warn" ? "Near tolerance" : "Out of tolerance", rule: d.reconciliation.id };
+  const v = st.handoff.value;
+  let value = null;
+  if (v) {
+    const vol = d.gold.map(g => g[v.volume_key]);
+    value = { now: now / 100 * last7(vol) * 30 * v.unit_price, was: was / 100 * first7(vol) * 30 * v.unit_price, label: v.price_label, at_risk: v.at_risk };
+  }
+  return { key, series: roll7(s), now, was, tol, cls, value, label: cls === "good" ? "Within tolerance" : cls === "warn" ? "Near tolerance" : "Out of tolerance", rule: d.reconciliation.id };
 }
 function vcCard(st, i, n) {
   const live = vcLive(st);
@@ -1139,7 +1148,11 @@ function vcCard(st, i, n) {
         <div><div class="vc-sub">Hand-off check</div><div class="vc-hand${live ? " live" : ""}">${ICON_SWAP}<div>To <b>${esc(st.handoff.to)}</b>: ${esc(st.handoff.check)}.
           ${live ? `<div class="vc-live"><div class="vc-live-row"><span class="vc-live-v num">${fmt(live.now, 2)}%</span>${pill(live.cls, live.label)}</div>
             <div class="note">7-day gap now, against a ${fmt(live.tol, 0)}% tolerance (rule ${esc(live.rule)}). Week 1 was ${fmt(live.was, 2)}%.</div>
-            ${spark(live.series, "var(--s1)", 220, 36)}<a class="vc-live-link" href="#quality">See it in Data quality →</a></div>`
+            ${spark(live.series, "var(--s1)", 220, 36)}
+            ${live.value ? `<div class="vc-value"><div class="vc-value-h">Value at stake</div>
+              <div class="vc-value-row"><span class="vc-value-v num">${fmtUSD(live.value.now)}</span><span class="note">per month now</span><span class="vc-value-was num"><span class="note">week 1: </span>${fmtUSD(live.value.was)}</span></div>
+              <div class="note">${esc(live.value.at_risk)}, at ${esc(live.value.label)}. Synthetic prices, for illustration.</div></div>` : ""}
+            <a class="vc-live-link" href="#quality">See it in Data quality →</a></div>`
           : `<div class="note" style="margin-top:6px">Not modelled in FieldTrust yet. It is on the roadmap as a reconciliation rule.</div>`}</div></div></div>
       </div>
     </div>
@@ -1165,11 +1178,11 @@ V["value-chain"] = () => {
     const hp = sc.stages[st.id].hand; if (!hp || !st.handoff) return;
     const live = vcLive(st), [hx, hy] = hp, cls = live ? live.cls : "neutral";
     const tt = `<div class="tt-h">Hand-off · ${esc(st.name)} → ${esc(st.handoff.to)}</div><div style="max-width:260px">${esc(st.handoff.check)}</div>` +
-      (live ? `<div style="margin-top:6px"><b>${fmt(live.now, 2)}%</b> gap now · tolerance ${fmt(live.tol, 0)}% · week 1 ${fmt(live.was, 2)}%</div>` : `<div style="margin-top:6px;color:var(--ink-3)">Not modelled yet</div>`);
+      (live ? `<div style="margin-top:6px"><b>${fmt(live.now, 2)}%</b> gap now · tolerance ${fmt(live.tol, 0)}% · week 1 ${fmt(live.was, 2)}%</div>${live.value ? `<div style="margin-top:4px"><b>${fmtUSD(live.value.now)}</b>/month at stake (week 1: ${fmtUSD(live.value.was)})</div>` : ""}` : `<div style="margin-top:6px;color:var(--ink-3)">Not modelled yet</div>`);
     hands += `<g class="vc-handm ${cls}${live ? " live" : ""}" data-vc="${st.id}" data-tt="${esc(tt)}" transform="translate(${hx},${hy})">
       ${live ? `<circle r="9" class="hm-ring"><animate attributeName="r" values="7;18" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="2s" repeatCount="indefinite"/></circle>` : ""}
       <rect x="-6" y="-6" width="12" height="12" rx="2" transform="rotate(45)" class="hm-d"/>
-      ${live ? `<g transform="translate(0,-24)"><rect x="-38" y="-10" width="76" height="20" rx="10" class="hm-bg"/><text y="4" text-anchor="middle" class="hm-t">${fmt(live.now, 2)}% GAP</text></g>` : ""}</g>`;
+      ${live ? (() => { const txt = `${fmt(live.now, 2)}% GAP${live.value ? ` · ${fmtUSD(live.value.now).replace("US$", "$")}/MO` : ""}`, w = txt.length * 6.3 + 18; return `<g transform="translate(0,-24)"><rect x="${-w / 2}" y="-10" width="${w}" height="20" rx="4" class="hm-bg"/><text y="4" text-anchor="middle" class="hm-t">${txt}</text></g>`; })() : ""}</g>`;
   });
   const svg = `<svg id="vcSvg" viewBox="0 0 ${sc.w} ${sc.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Animated cross-section of the ${esc(DOMAINS[S.domain].label)} value chain with data flowing to the data layer">
     ${sc.svg}${hits}<rect class="vc-hl" id="vcHl" rx="12"/>${hands}${pins}</svg>`;
@@ -1187,7 +1200,7 @@ V["value-chain"] = () => {
   ${header(`Value chain · ${DOMAINS[S.domain].label} pack`, vc.title, esc(vc.lede))}
   <section class="panel flush">
     ${panelHead("Physical flow, mapped to data", "Click a numbered stage or play the tour. Each asset sends its data up to the data layer; shape and colour show the type of data.",
-      `<div class="vc-ctrl"><button class="btn primary" type="button" id="vcTour" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg><span>Play the tour</span></button><button class="btn" type="button" id="vcAll">Whole chain</button></div>`)}
+      `<div class="vc-ctrl"><button class="btn primary" type="button" id="vcTour" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg><span>Play the tour</span></button><button class="btn" type="button" id="vcAll">Whole chain</button><button class="btn" type="button" id="vcMotion" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg><span>Pause motion</span></button></div>`)}
     <div class="vc-scene has-sel" id="vcScene">${svg}</div>
     <div class="vc-steps" id="vcSteps">${steps}</div>
     <div class="vc-foot"><div class="vc-legend">${legend}</div><div class="vc-prog" aria-hidden="true"><i id="vcProg"></i></div></div>
@@ -1204,7 +1217,6 @@ V["value-chain"] = () => {
     scene.dataset.bound = "1";
     const full = [0, 0, sc.w, sc.h], aspect = sc.w / sc.h;
     VC.vb = full.slice();
-    if (REDUCED() && svgEl.pauseAnimations) svgEl.pauseAnimations();
     // vehicles on winding roads: placed along the path each frame, kept upright and
     // facing the way they travel (SMIL's auto-rotate would flip them upside down)
     const movers = $$(".sc-mover", svgEl).map(g => {
@@ -1227,10 +1239,31 @@ V["value-chain"] = () => {
         m.g.setAttribute("opacity", Math.min(1, t / .02, (1 - t) / .02).toFixed(2));
       });
     };
-    if (movers.length) {
-      if (REDUCED()) place(9000);
-      else { const loop = now => { place(now); VC.mov = requestAnimationFrame(loop); }; VC.mov = requestAnimationFrame(loop); }
+    // motion control: the viewer can pause it, and it pauses itself off screen
+    let userPaused = REDUCED(), visible = true, running = false;
+    place(9000);
+    const loop = now => { place(now); VC.mov = requestAnimationFrame(loop); };
+    const applyMotion = () => {
+      const on = visible && !userPaused && !document.hidden;
+      if (on === running) return;
+      running = on;
+      if (on) { if (svgEl.unpauseAnimations) svgEl.unpauseAnimations(); if (movers.length) VC.mov = requestAnimationFrame(loop); }
+      else { if (svgEl.pauseAnimations) svgEl.pauseAnimations(); cancelAnimationFrame(VC.mov); }
+    };
+    const motionBtn = $("#vcMotion");
+    const paintBtn = () => {
+      motionBtn.setAttribute("aria-pressed", String(userPaused));
+      $("span", motionBtn).textContent = userPaused ? "Play motion" : "Pause motion";
+      $("svg path", motionBtn).setAttribute("d", userPaused ? "M7 4l13 8-13 8z" : "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z");
+    };
+    motionBtn.addEventListener("click", () => { userPaused = !userPaused; paintBtn(); applyMotion(); });
+    if ("IntersectionObserver" in window) {
+      VC.io = new IntersectionObserver(es => { visible = es[0].isIntersecting; applyMotion(); }, { threshold: 0.05 });
+      VC.io.observe(scene);
     }
+    VC.onVis = () => applyMotion(); document.addEventListener("visibilitychange", VC.onVis);
+    if (svgEl.pauseAnimations && userPaused) svgEl.pauseAnimations();
+    paintBtn(); applyMotion();
     const setVB = v => { VC.vb = v; svgEl.setAttribute("viewBox", v.map(x => x.toFixed(1)).join(" ")); scene.classList.toggle("zoomed", v[2] < sc.w - 1); };
     // on phones the zoomed view uses a taller frame so a stage fills the screen
     const focusOf = id => {
