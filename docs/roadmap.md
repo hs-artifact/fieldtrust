@@ -4,7 +4,8 @@ FieldTrust grows in public releases. Each release deepens one part of the produc
 
 | Release | Focus | Adds |
 |---|---|---|
-| **v1.1.1** (current) | Value chain | Animated reservoir-to-vessel and pit-to-shipment scenes, each stage mapped to data type, format, frequency, consumers, function and hand-off checks; guided tour and data map |
+| **v1.1.2** (current) | Value chain, live | LNG liquefaction at the terminal, live hand-off markers from the reconciliation rules, packet rate driven by data frequency, phone zoom |
+| v1.1.1 | Value chain | Animated reservoir-to-vessel and pit-to-shipment scenes, each stage mapped to data type, format, frequency, consumers, function and hand-off checks; guided tour and data map |
 | v1.1 | Framework & interaction | Field-to-Decision framework, stakeholder layers, goal tree, maturity, playbook of normal and edge cases, 90-day replay, what-if simulator, live pipeline animation |
 | v1.0 | All five disciplines at demo depth | Two domain packs, medallion pipeline, rule engine, governance catalogue, ops, stage gates, adoption |
 | v1.2 | Data engineering depth | PostgreSQL target, incremental loads, late-arriving data handling, pipeline unit tests |
@@ -16,6 +17,7 @@ FieldTrust grows in public releases. Each release deepens one part of the produc
 
 ## Changelog
 
+- **v1.1.2**: Live hand-off checks on the value chain, LNG train, frequency-driven data packets.
 - **v1.1.1**: Value chain view with animated cross-sections for both domain packs.
 - **v1.1**: Framework page, playbook, replay, what-if simulator, live pipeline animation.
 - **v1.0**: First public showcase.
