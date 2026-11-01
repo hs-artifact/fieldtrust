@@ -1,0 +1,112 @@
+# Programme artefacts — Oil & Gas (fictional). Written by the programme lead,
+# not generated: this is where operational judgement lives.
+
+glossary:
+  - kpi: Field gas production
+    unit: MMSCFD
+    definition: Total gas produced by all wells in a production day, from allocated daily report volumes.
+    formula: SUM(alloc_gas_mmscf) per prod_date
+    owner: Production Engineering Lead
+    sources: [daily_production_report]
+  - kpi: Allocation reconciliation error
+    unit: "%"
+    definition: Gap between the sum of allocated well volumes and the fiscal export meter.
+    formula: ABS(SUM(alloc) - export) / export x 100
+    owner: Commercial & Hydrocarbon Accounting Lead
+    sources: [daily_production_report, fiscal_meter_daily]
+  - kpi: Well uptime
+    unit: "%"
+    definition: Share of hours in the day a well produced gas above 0.1 MMSCFD, measured on GOOD historian data only.
+    formula: COUNT(hours with gas > 0.1) / 24
+    owner: Production Engineering Lead
+    sources: [historian_well_hourly]
+  - kpi: Data trust score
+    unit: "0-100"
+    definition: How far the day's data can be relied on for a decision. Blends rule pass-rate across all sources with reconciliation accuracy.
+    formula: 0.7 x rule pass-rate + 0.3 x reconciliation score
+    owner: Production Data Steward
+    sources: [all silver datasets]
+
+raci:
+  roles: [Asset Manager, Production Eng. Lead, Data Steward, OT Integration Eng., Digital Ops Lead]
+  activities:
+    - activity: Define KPI and acceptance threshold
+      assign: [A, R, C, I, C]
+    - activity: Maintain data quality rules
+      assign: [I, C, A, R, C]
+    - activity: Resolve rule failure at source
+      assign: [I, C, A, R, I]
+    - activity: Run and monitor pipeline 24x7
+      assign: [I, I, C, C, A]
+    - activity: Approve data for regulatory report
+      assign: [A, R, R, I, I]
+
+transformation:
+  - id: OG-TR-01
+    capability: Automated daily allocation
+    requirement: Allocated volumes available by 08:00 without manual consolidation
+    acceptance: 30 consecutive days delivered by 08:00 with reconciliation error under 2%
+    stage: 5
+    evidence: Run log Aug-Oct, reconciliation chart
+    value: About 3 engineer-hours per day returned to well surveillance
+  - id: OG-TR-02
+    capability: Historian unit normalisation
+    requirement: All pressure tags delivered in psi with a quality code
+    acceptance: Zero envelope-rule failures for 14 days after go-live
+    stage: 4
+    evidence: Rule OG-H-03 trend after intervention day 24
+    value: Removed false low-pressure alarms on four wells
+  - id: OG-TR-03
+    capability: Validated digital daily report
+    requirement: Range-checked entry with one record per well-day
+    acceptance: Duplicate and typo rate under 0.5% over a month, signed by field supervisors
+    stage: 4
+    evidence: Rules OG-D-02 and OG-D-03 trend, supervisor sign-off sheet
+    value: Report rework cut from daily to rare
+  - id: OG-TR-04
+    capability: Steward alerting on rule failure
+    requirement: Each blocking failure routed to a named steward within 15 minutes
+    acceptance: Field test with 20 injected failures, all routed and closed inside 24 hours
+    stage: 3
+    evidence: Field acceptance test record (planned)
+    value: Faster fix at source instead of downstream correction
+  - id: OG-TR-05
+    capability: Well-test data integration
+    requirement: Well-test results feed allocation factors automatically
+    acceptance: Factors match manual calculation on 3 test cycles
+    stage: 1
+    evidence: Requirement signed off
+    value: More accurate back-allocation per well
+
+change:
+  stakeholders:
+    - group: Asset Manager
+      power: 9
+      interest: 7
+    - group: Production Engineers
+      power: 6
+      interest: 9
+    - group: Control Room Operators
+      power: 3
+      interest: 8
+    - group: Field Supervisors
+      power: 5
+      interest: 4
+    - group: Hydrocarbon Accounting
+      power: 7
+      interest: 5
+    - group: IT Infrastructure
+      power: 4
+      interest: 2
+  adkar_groups: [Production Engineers, Control Room Operators, Field Supervisors, Asset Management]
+  adkar:
+    baseline:
+      Production Engineers:   [4, 3, 3, 2, 1]
+      Control Room Operators: [3, 2, 2, 2, 1]
+      Field Supervisors:      [2, 1, 2, 1, 1]
+      Asset Management:       [4, 4, 2, 2, 1]
+    current:
+      Production Engineers:   [5, 5, 4, 4, 4]
+      Control Room Operators: [5, 4, 4, 4, 3]
+      Field Supervisors:      [4, 4, 4, 3, 3]
+      Asset Management:       [5, 5, 4, 4, 4]

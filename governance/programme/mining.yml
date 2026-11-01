@@ -1,0 +1,117 @@
+# Programme artefacts — Mining (fictional).
+
+glossary:
+  - kpi: Hauled tonnage
+    unit: t/day
+    definition: Total payload moved by the haul fleet in a production day, from validated FMS cycles.
+    formula: SUM(payload_t) per day, silver cycles only
+    owner: Mine Operations Superintendent
+    sources: [fms_haul_cycles]
+  - kpi: WIM vs FMS bias
+    unit: "%"
+    definition: Average difference between weighbridge net weight and on-board payload for matched cycles.
+    formula: AVG((net_t - ref_payload_t) / ref_payload_t) x 100
+    owner: Production Reporting Steward
+    sources: [wim_tickets, fms_haul_cycles]
+  - kpi: Average cycle time
+    unit: min
+    definition: Mean load-to-load time of a haul cycle.
+    formula: AVG(cycle_min), silver cycles only
+    owner: Mine Operations Superintendent
+    sources: [fms_haul_cycles]
+  - kpi: Fatigue alert precision
+    unit: "%"
+    definition: Share of fatigue alerts the control room confirmed as true events.
+    formula: TP / (TP + FP) x 100
+    owner: Health, Safety & Environment Manager
+    sources: [fatigue_alerts]
+  - kpi: Data trust score
+    unit: "0-100"
+    definition: How far the day's data can be relied on for a decision. Blends rule pass-rate across all sources with WIM-FMS agreement.
+    formula: 0.7 x rule pass-rate + 0.3 x reconciliation score
+    owner: Dispatch Data Steward
+    sources: [all silver datasets]
+
+raci:
+  roles: [Site GM, Mine Ops Supt., Data Steward, FMS Admin, Digital Ops Lead]
+  activities:
+    - activity: Define KPI and acceptance threshold
+      assign: [A, R, C, I, C]
+    - activity: Maintain data quality rules
+      assign: [I, C, A, R, C]
+    - activity: Calibrate field instruments (WIM, OBU)
+      assign: [I, A, C, R, I]
+    - activity: Run and monitor pipeline 24x7
+      assign: [I, I, C, C, A]
+    - activity: Approve tonnage for monthly report
+      assign: [A, R, R, I, I]
+
+transformation:
+  - id: MN-TR-01
+    capability: WIM accuracy to regulatory class
+    requirement: WIM net weight within accuracy class against certified reference
+    acceptance: Bias under 2% vs FMS for 30 days and calibration certificate issued
+    stage: 5
+    evidence: Bias trend after day 20, calibration certificate
+    value: Tonnage accepted for production reporting; WIM adoption 50% to 80%
+  - id: MN-TR-02
+    capability: Fatigue alert credibility
+    requirement: Reduce false alarms without losing true-event coverage
+    acceptance: False alarms down at least 15% with zero missed validated events over 4 weeks
+    stage: 5
+    evidence: Precision trend after day 48, TP/FP confusion matrix
+    value: False alarms down 20%; alarm adoption 75% to 90%
+  - id: MN-TR-03
+    capability: OBU re-sync de-duplication
+    requirement: Duplicate cycles from offline sync removed before reporting
+    acceptance: Duplicate rate under 0.2% on 3 audited shifts
+    stage: 4
+    evidence: Rule MN-C-05 trend, shift audit record
+    value: Tonnage no longer over-counted after network dropouts
+  - id: MN-TR-04
+    capability: Dispatch decision on trusted data
+    requirement: Supervisors check trust score before acting on a KPI
+    acceptance: 80% of shift reviews reference the trust panel for 4 weeks
+    stage: 3
+    evidence: Toolbox talk attendance, review checklist (in field test)
+    value: Fewer decisions reversed after data corrections
+  - id: MN-TR-05
+    capability: Payload-to-plan reconciliation
+    requirement: Hauled tonnage reconciled daily to the mine plan by block
+    acceptance: Reconciliation report accepted by planning for 2 month-ends
+    stage: 2
+    evidence: Built in test environment
+    value: Earlier detection of plan deviation
+
+change:
+  stakeholders:
+    - group: Site GM
+      power: 10
+      interest: 6
+    - group: Mine Operations Supt.
+      power: 8
+      interest: 9
+    - group: Dispatchers
+      power: 4
+      interest: 9
+    - group: Shift Supervisors
+      power: 6
+      interest: 5
+    - group: Haul Truck Operators
+      power: 3
+      interest: 3
+    - group: HSE
+      power: 7
+      interest: 8
+  adkar_groups: [Dispatchers, Shift Supervisors, Mine Planners, Site Leadership]
+  adkar:
+    baseline:
+      Dispatchers:       [4, 3, 3, 3, 1]
+      Shift Supervisors: [2, 1, 2, 1, 1]
+      Mine Planners:     [3, 3, 2, 2, 1]
+      Site Leadership:   [4, 3, 2, 2, 1]
+    current:
+      Dispatchers:       [5, 5, 5, 4, 4]
+      Shift Supervisors: [4, 4, 4, 3, 3]
+      Mine Planners:     [4, 4, 4, 4, 3]
+      Site Leadership:   [5, 5, 4, 4, 4]
