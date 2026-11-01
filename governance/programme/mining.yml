@@ -115,3 +115,92 @@ change:
       Shift Supervisors: [4, 4, 4, 3, 3]
       Mine Planners:     [4, 4, 4, 4, 3]
       Site Leadership:   [5, 5, 4, 4, 4]
+
+goal_tree:
+  objective: Safe, predictable tonnage at target cost
+  kpis:
+    - kpi: Hauled tonnage
+      target: Meet the daily plan
+      data: [FMS payload present and in range (MN-C-01, MN-C-02), no resync duplicates (MN-C-05)]
+    - kpi: WIM vs FMS bias
+      target: Within the 2% accuracy class
+      data: [WIM net weight valid (MN-W-02), reconciliation MN-R-01]
+    - kpi: Fatigue alert precision
+      target: Rising, with zero missed validated events
+      data: [Every alert validated TP/FP (MN-F-01)]
+
+layers:
+  - layer: Haul truck operators
+    goal: A safe shift and a fair view of their performance
+    pain: Fatigue false alarms erode trust in the system
+    quadrant: Monitor
+    adkar_focus: Desire
+    approach: Explain the threshold tuning and show false alarms falling
+    process: Fatigue response SOP (verify, rest break, report)
+    technology: Tuned fatigue thresholds and hold times
+    signal: False alarm rate
+  - layer: Dispatchers & control room
+    goal: An accurate live picture of the fleet
+    pain: Duplicate cycles after radio dropouts; slow alert validation
+    quadrant: Keep informed
+    adkar_focus: Ability
+    approach: Console workflow training; one champion per crew
+    process: Alert validation within 5 minutes (TP/FP)
+    technology: Resync de-duplication, validation console
+    signal: Validation completeness, duplicate rate
+  - layer: Shift supervisors
+    goal: Hit the shift target without disputes at handover
+    pain: KPIs argued at every handover
+    quadrant: Keep satisfied
+    adkar_focus: Reinforcement
+    approach: Toolbox talk; trust panel in the shift review checklist
+    process: Shift review checklist referencing trust score
+    technology: Trust panel per KPI
+    signal: Share of reviews referencing the trust panel
+  - layer: Mine planners & production reporting
+    goal: Tonnage reconciled to plan and accepted for reporting
+    pain: WIM read about 4% heavy and could not be reported
+    quadrant: Keep informed
+    adkar_focus: Knowledge
+    approach: Share calibration certificate and before/after evidence
+    process: Daily WIM zero-check and monthly calibration SOP
+    technology: WIM calibration and reconciliation rule
+    signal: WIM vs FMS gap
+  - layer: HSE
+    goal: Fatigue risk under control
+    pain: Alarm fatigue undermines the fatigue programme
+    quadrant: Manage closely
+    adkar_focus: Awareness
+    approach: TP/FP analysis; HSE signs the acceptance criterion
+    process: Fatigue management programme
+    technology: Threshold tuning from validated alerts
+    signal: Alert precision, missed events (zero)
+  - layer: Site GM & leadership
+    goal: Safe, predictable tonnage at target cost
+    pain: Monthly disputes over which number is right
+    quadrant: Manage closely
+    adkar_focus: Reinforcement
+    approach: Trust score in the monthly review; sponsor visible on shift
+    process: Data governance council, monthly tonnage approval
+    technology: Executive trust and value view
+    signal: Trust score, adoption
+
+maturity:
+  - area: Ownership & stewardship
+    baseline: 1
+    now: 4
+  - area: Data quality management
+    baseline: 2
+    now: 4
+  - area: Metadata, glossary & lineage
+    baseline: 1
+    now: 3
+  - area: Data literacy
+    baseline: 1
+    now: 3
+  - area: Operating model & council
+    baseline: 1
+    now: 3
+  - area: Adoption & value tracking
+    baseline: 1
+    now: 4

@@ -110,3 +110,95 @@ change:
       Control Room Operators: [5, 4, 4, 4, 3]
       Field Supervisors:      [4, 4, 4, 3, 3]
       Asset Management:       [5, 5, 4, 4, 4]
+
+# Goal tree: strategic objective -> operational KPIs -> data requirements
+goal_tree:
+  objective: Reliable gas delivery at the lowest unit cost, with compliant fiscal reporting
+  kpis:
+    - kpi: Field gas production
+      target: Meet daily nomination
+      data: [daily_production_report on time and unique (OG-D-03, OG-D-04)]
+    - kpi: Allocation reconciliation error
+      target: Under 2% against the fiscal meter
+      data: [Allocated volumes in range (OG-D-02), fiscal meter complete (OG-F-01), reconciliation OG-R-01]
+    - kpi: Well uptime
+      target: Above 97%
+      data: [Historian tags GOOD and in psi (OG-H-02, OG-H-03), gas rate present (OG-H-01)]
+
+# Stakeholder layers, frontline first. Each layer gets its own goal, pain point,
+# engagement approach, process artefact, technology touchpoint and data signal.
+layers:
+  - layer: Field operators & technicians
+    goal: Finish routine rounds safely with less paperwork
+    pain: Double entry and rework; blamed when numbers are wrong
+    quadrant: Monitor
+    adkar_focus: Knowledge & Ability
+    approach: Hands-on coaching at shift change, tablet form with built-in checks
+    process: Daily report entry SOP, deadline 10:00
+    technology: Validated digital daily report
+    signal: On-time entry rate, typo and duplicate rate
+  - layer: Control room operators
+    goal: Alarms and pressures they can trust
+    pain: False low-pressure alarms caused by bar/psi mix-up
+    quadrant: Keep informed
+    adkar_focus: Desire
+    approach: Show the fixed alarms and the rule that now catches the error
+    process: Management of change for tag mapping
+    technology: Historian unit normalisation and quality codes
+    signal: Envelope rule failures (OG-H-03)
+  - layer: Field supervisors
+    goal: Crew productivity and reports in on time
+    pain: Chasing late reports every morning
+    quadrant: Monitor
+    adkar_focus: Desire
+    approach: Show the time the validated form saves the crew
+    process: Shift handover checklist
+    technology: Late-entry view per crew
+    signal: Late entries per crew
+  - layer: Production engineers
+    goal: More time on well surveillance, accurate allocation
+    pain: Three hours a day consolidating spreadsheets
+    quadrant: Manage closely
+    adkar_focus: Reinforcement
+    approach: Co-design the allocation KPIs; trust score in the daily review
+    process: Daily allocation review with a trust gate
+    technology: Automated allocation pipeline
+    signal: Reconciliation error, adoption
+  - layer: Hydrocarbon accounting
+    goal: Compliant fiscal reporting with no month-end surprises
+    pain: Reconciliation gaps found late
+    quadrant: Keep satisfied
+    adkar_focus: Awareness
+    approach: Frame evidence as audit readiness; involve in acceptance criteria
+    process: Monthly reconciliation and data approval procedure
+    technology: Reconciliation rule OG-R-01
+    signal: Days within 2% tolerance
+  - layer: Asset manager & leadership
+    goal: Reliable delivery at lowest unit cost, regulatory compliance
+    pain: Decisions made on numbers that are later revised
+    quadrant: Manage closely
+    adkar_focus: Reinforcement
+    approach: Trust score in the monthly steering review; sponsor visible on site
+    process: Data governance council, RACI sign-off
+    technology: Executive trust and value view
+    signal: Trust score, value realised
+
+maturity:
+  - area: Ownership & stewardship
+    baseline: 1
+    now: 4
+  - area: Data quality management
+    baseline: 2
+    now: 4
+  - area: Metadata, glossary & lineage
+    baseline: 1
+    now: 3
+  - area: Data literacy
+    baseline: 2
+    now: 3
+  - area: Operating model & council
+    baseline: 1
+    now: 3
+  - area: Adoption & value tracking
+    baseline: 1
+    now: 4
