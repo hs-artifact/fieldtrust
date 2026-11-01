@@ -1,0 +1,130 @@
+# Data contracts — Mining domain pack (Ridgeback Pit, fictional)
+# Open-pit coal operation, 40 x 100-tonne class haul trucks, 3-shift / 24x7.
+
+domain: mining
+site: Ridgeback Pit
+description: Open-pit coal mine, 40 haul trucks, one in-pit weigh-in-motion station.
+
+datasets:
+  - name: fms_haul_cycles
+    layer: bronze
+    source_system: Fleet management system (on-board unit events)
+    business_owner: Mine Operations Superintendent
+    data_steward: Dispatch Data Steward
+    technical_owner: FMS Administrator
+    classification: Internal - Operational
+    freshness_sla_minutes: 30
+    grain: one row per completed haul cycle
+    primary_key: [cycle_id]
+    columns:
+      cycle_id: Haul cycle identifier
+      truck_id: Haul truck (HT-101..HT-140)
+      shift: Day / Night
+      load_ts: Time loaded at the shovel
+      dump_ts: Time dumped
+      payload_t: On-board payload estimate, tonnes
+      cycle_min: Load-to-load cycle time, minutes
+      in_geofence: GPS position inside the pit boundary at dump (1/0)
+      ingest_ts: Time the event landed in the platform
+    rules:
+      - id: MN-C-01
+        dimension: completeness
+        severity: block
+        description: Payload must be recorded
+        valid_when: payload_t IS NOT NULL
+      - id: MN-C-02
+        dimension: validity
+        severity: block
+        description: Payload within 20-140 t for a 100 t class truck
+        valid_when: payload_t BETWEEN 20 AND 140
+      - id: MN-C-03
+        dimension: validity
+        severity: block
+        description: Cycle time between 8 and 180 minutes
+        valid_when: cycle_min BETWEEN 8 AND 180
+      - id: MN-C-04
+        dimension: validity
+        severity: warn
+        description: Dump position inside the pit geofence
+        valid_when: in_geofence = 1
+      - id: MN-C-05
+        dimension: uniqueness
+        severity: block
+        description: One row per cycle (OBU re-sync duplicates removed)
+        valid_when: dup_rank = 1
+      - id: MN-C-06
+        dimension: timeliness
+        severity: warn
+        description: Event lands within 30 minutes (OBU offline sync)
+        valid_when: lag_minutes <= 30
+
+  - name: wim_tickets
+    layer: bronze
+    source_system: Weigh-in-motion station
+    business_owner: Mine Operations Superintendent
+    data_steward: Production Reporting Steward
+    technical_owner: Instrumentation Technician
+    classification: Internal - Production reporting
+    freshness_sla_minutes: 15
+    grain: one row per truck pass over the scale
+    primary_key: [ticket_id]
+    columns:
+      ticket_id: Weighbridge ticket
+      truck_id: Haul truck
+      ts: Pass time
+      net_t: Net weight, tonnes
+      ref_payload_t: Matched FMS payload for the same cycle, tonnes
+    rules:
+      - id: MN-W-01
+        dimension: completeness
+        severity: block
+        description: Net weight must be recorded
+        valid_when: net_t IS NOT NULL
+      - id: MN-W-02
+        dimension: validity
+        severity: block
+        description: Net weight within 20-140 t
+        valid_when: net_t BETWEEN 20 AND 140
+
+  - name: fatigue_alerts
+    layer: bronze
+    source_system: In-cab fatigue monitoring
+    business_owner: Health, Safety & Environment Manager
+    data_steward: Safety Data Steward
+    technical_owner: Safety Systems Engineer
+    classification: Confidential - Personal (pseudonymised)
+    freshness_sla_minutes: 5
+    grain: one row per alert raised
+    primary_key: [alert_id]
+    columns:
+      alert_id: Alert identifier
+      truck_id: Haul truck
+      ts: Alert time
+      shift: Day / Night
+      verdict: Control-room validation (TP true event / FP false alarm)
+    rules:
+      - id: MN-F-01
+        dimension: completeness
+        severity: warn
+        description: Every alert is validated by the control room
+        valid_when: verdict IS NOT NULL
+
+reconciliation:
+  id: MN-R-01
+  dimension: consistency
+  description: WIM net weight must agree with FMS payload within 2% (accuracy class target)
+  tolerance_pct: 2.0
+
+interventions:
+  - day: 20
+    title: WIM loadcell calibration to accuracy class
+    type: technology
+    detail: Loadcells re-calibrated with certified test weights and a daily zero-check added. Systematic bias of about +4% removed.
+  - day: 48
+    title: Fatigue threshold and hold-time tuning
+    type: process
+    detail: Thresholds re-tuned from 6 weeks of validated alerts (TP/FP). False alarms down by 20% without losing true-event coverage.
+  - day: 63
+    title: Shift supervisor coaching on data-driven dispatch
+    type: people
+    detail: Supervisors trained to use the trust score before acting on a KPI. ADKAR reinforcement through a weekly toolbox talk.

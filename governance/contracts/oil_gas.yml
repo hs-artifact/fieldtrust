@@ -1,0 +1,142 @@
+# Data contracts — Oil & Gas domain pack (Kestrel Gas Field, fictional)
+# Each contract declares ownership, freshness and the quality rules a dataset
+# must satisfy before it is promoted from bronze to silver.
+# Rule `valid_when` is a SQL predicate evaluated per row (SQLite dialect).
+# severity: block  -> row is quarantined and never reaches silver
+#           warn   -> row is promoted but flagged and counted against the score
+
+domain: oil_gas
+site: Kestrel Gas Field
+description: Onshore gas field, 12 producing wells, one fiscal export meter.
+
+datasets:
+  - name: historian_well_hourly
+    layer: bronze
+    source_system: Process historian (PI-style tag export)
+    business_owner: Production Engineering Lead
+    data_steward: Production Data Steward
+    technical_owner: OT Integration Engineer
+    classification: Internal - Operational
+    freshness_sla_minutes: 120
+    grain: one row per well per hour
+    primary_key: [well_id, ts]
+    columns:
+      well_id: Well identifier (W-01..W-12)
+      ts: Measurement hour (local site time)
+      whp_psi: Wellhead pressure, psi
+      wht_c: Wellhead temperature, degC
+      gas_mmscfd: Instantaneous gas rate, MMSCFD
+      cond_bpd: Condensate rate, bbl/d
+      water_bpd: Water rate, bbl/d
+      quality_code: Historian tag quality (GOOD / BAD / STALE)
+      ingest_ts: Time the row landed in the platform
+    rules:
+      - id: OG-H-01
+        dimension: completeness
+        severity: block
+        description: Gas rate must be present
+        valid_when: gas_mmscfd IS NOT NULL
+      - id: OG-H-02
+        dimension: validity
+        severity: block
+        description: Historian tag quality must be GOOD
+        valid_when: quality_code = 'GOOD'
+      - id: OG-H-03
+        dimension: validity
+        severity: block
+        description: Wellhead pressure within physical envelope (300-3000 psi); catches bar/psi unit mix-ups
+        valid_when: whp_psi BETWEEN 300 AND 3000
+      - id: OG-H-04
+        dimension: validity
+        severity: block
+        description: Gas rate non-negative and below 2x the well's rated capacity
+        valid_when: gas_mmscfd >= 0 AND gas_mmscfd <= 25
+      - id: OG-H-05
+        dimension: uniqueness
+        severity: block
+        description: One row per well per hour
+        valid_when: dup_rank = 1
+      - id: OG-H-06
+        dimension: timeliness
+        severity: warn
+        description: Row lands within the 120-minute freshness SLA
+        valid_when: lag_minutes <= 120
+
+  - name: daily_production_report
+    layer: bronze
+    source_system: Daily production report (field data entry)
+    business_owner: Production Engineering Lead
+    data_steward: Production Data Steward
+    technical_owner: Digital Applications Analyst
+    classification: Internal - Regulatory reporting
+    freshness_sla_minutes: 600
+    grain: one row per well per production day
+    primary_key: [well_id, prod_date]
+    columns:
+      well_id: Well identifier
+      prod_date: Production day
+      alloc_gas_mmscf: Allocated gas volume for the day, MMSCF
+      alloc_cond_bbl: Allocated condensate, bbl
+      entered_by: Role that entered the record
+      entered_at: Entry timestamp
+    rules:
+      - id: OG-D-01
+        dimension: completeness
+        severity: block
+        description: Allocated gas volume must be present
+        valid_when: alloc_gas_mmscf IS NOT NULL
+      - id: OG-D-02
+        dimension: validity
+        severity: block
+        description: Allocated gas within 0-25 MMSCF per well-day (catches decimal-shift typos)
+        valid_when: alloc_gas_mmscf BETWEEN 0 AND 25
+      - id: OG-D-03
+        dimension: uniqueness
+        severity: block
+        description: One record per well per day
+        valid_when: dup_rank = 1
+      - id: OG-D-04
+        dimension: timeliness
+        severity: warn
+        description: Entered before 10:00 the following day
+        valid_when: lag_minutes <= 600
+
+  - name: fiscal_meter_daily
+    layer: bronze
+    source_system: Fiscal export meter (custody transfer)
+    business_owner: Commercial & Hydrocarbon Accounting Lead
+    data_steward: Hydrocarbon Accounting Steward
+    technical_owner: Metering Engineer
+    classification: Confidential - Commercial
+    freshness_sla_minutes: 180
+    grain: one row per production day
+    primary_key: [prod_date]
+    columns:
+      prod_date: Production day
+      export_gas_mmscf: Metered export gas, MMSCF
+    rules:
+      - id: OG-F-01
+        dimension: completeness
+        severity: block
+        description: Export volume must be present
+        valid_when: export_gas_mmscf IS NOT NULL
+
+reconciliation:
+  id: OG-R-01
+  dimension: consistency
+  description: Sum of allocated well volumes must reconcile to the fiscal meter within 2%
+  tolerance_pct: 2.0
+
+interventions:
+  - day: 24
+    title: Historian tag mapping & unit normalisation fixed at source
+    type: technology
+    detail: Pressure tags on four wells were exporting in bar. Mapping corrected at the interface and a physical-envelope rule added.
+  - day: 52
+    title: Daily report moved to a validated digital form
+    type: process
+    detail: Free-text spreadsheet replaced with a form that enforces ranges and one record per well-day; entry deadline agreed with field supervisors.
+  - day: 66
+    title: Data owner and steward roles formally assigned
+    type: people
+    detail: RACI signed off by the asset manager. Every rule failure now routes to a named steward with a 24-hour response target.
