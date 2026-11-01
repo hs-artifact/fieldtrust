@@ -131,6 +131,11 @@ oil_gas:
       to: Export metering station
       check: Sum of allocated well volumes vs fiscal export meter (allocation factor)
       live: recon_error_pct
+      value:
+        volume_key: field_gas_mmscf
+        unit_price: 6300
+        price_label: US$6.3k per MMscf (about US$6 per MMBtu)
+        at_risk: revenue and entitlement at risk
   - id: drilling-pipe
     name: Drill string
     what: A rotating string of steel pipe, up to 4 km long, drives the bit through rock. Sensors near the bit send
@@ -630,6 +635,11 @@ mining:
       to: Coal hauling
       check: FMS payload tonnes vs WIM net weight on the haul road
       live: recon_error_pct
+      value:
+        volume_key: tonnage_t
+        unit_price: 4.8
+        price_label: US$4.80 per tonne hauled (60 km contract rate)
+        at_risk: contractor over- or under-payment
   - id: rom
     name: ROM stockpile
     what: Run-of-mine coal is dumped on stockpiles by quality. Samples set the calorific value, ash and sulphur,
