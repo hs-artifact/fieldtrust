@@ -3,7 +3,33 @@
 **An operational data trust platform for oil & gas and mining.**
 Field reality → trusted data → decisions → adoption.
 
+[![Live demo](https://img.shields.io/badge/live%20demo-hs--artifact.github.io%2Ffieldtrust-e0650b?style=flat-square)](https://hs-artifact.github.io/fieldtrust/)
+[![Tests](https://github.com/hs-artifact/fieldtrust/actions/workflows/ci.yml/badge.svg)](https://github.com/hs-artifact/fieldtrust/actions/workflows/ci.yml)
+[![Deploy](https://github.com/hs-artifact/fieldtrust/actions/workflows/pages.yml/badge.svg)](https://github.com/hs-artifact/fieldtrust/actions/workflows/pages.yml)
+![Synthetic data](https://img.shields.io/badge/data-synthetic-5c6874?style=flat-square)
+
 > "If it doesn't work at 3 AM on night shift, it doesn't work."
+
+**[Open the live demo →](https://hs-artifact.github.io/fieldtrust/#value-chain)**
+
+![Value chain, night shift: reservoir to export vessel, each stage mapped to its data](docs/img/value-chain-night.gif)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/img/value-chain-day.gif" alt="Value chain, day shift: in-pit ring road, haul road and live hand-off gap"></td>
+    <td width="50%"><img src="docs/img/stage-card-night.png" alt="Stage card: data produced, sample record, consumers and live hand-off check with value at stake"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/img/overview-night.png" alt="Overview in night mode: trust score, adoption and live pipeline"></td>
+    <td><img src="docs/img/overview-day.png" alt="Overview in day mode"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/img/stage-card-day.png" alt="Stage card in day mode: FMS vs WIM reconciliation"></td>
+    <td><img src="docs/img/quality-day.png" alt="Data quality in day mode: five dimensions and weekly heatmap"></td>
+  </tr>
+</table>
+
+Dark theme plays the night shift with site lights on; light theme plays the day shift. Both run on the same data.
 
 Most digital programmes in heavy industry rarely fail on technology. They fail on untrusted data, unclear ownership, and systems that never get accepted on site. FieldTrust is a working model of how to close that gap. It brings five disciplines together in one product:
 
@@ -19,7 +45,7 @@ It is organised around one operating model, the **Field-to-Decision Transformati
 
 What you can explore:
 
-- **Value chain:** an animated cross-section of each business, from reservoir to export vessel and from pit to shipment. Every stage shows the data it produces (type, format, frequency, volume), a sample record, who consumes it, the business function it serves, and the hand-off check where trust usually breaks. Dark theme plays the night shift, light theme the day shift
+- **Value chain:** an animated cross-section of each business, from reservoir to export vessel and from pit to shipment. Every stage shows the data it produces (type, format, frequency, volume), a sample record, who consumes it, the business function it serves, and the hand-off check where trust usually breaks. Where FieldTrust models the hand-off, the marker shows the live gap and the money at stake each month (synthetic prices). Dark theme plays the night shift, light theme the day shift
 - **Framework:** an interactive map of the model, a goal tree, a stakeholder-layer table from frontline crews to leadership, governance maturity, and a *what-if* simulator that switches people, process or technology off to show what happens to trust and adoption
 - **Playbook:** normal and edge cases (good data nobody uses, everyone using wrong data, shadow spreadsheets, night-shift connectivity loss, safety-critical alarm tuning and more), each with symptom, data signal, root cause and resolution
 - **Replay:** watch the 90 days unfold, with the live pipeline animation, trust and adoption moving day by day
@@ -50,6 +76,15 @@ pip install -r requirements.txt
 python pipeline/run.py            # generate → validate → score → publish JSON
 python -m http.server -d app 8000 # open http://localhost:8000
 ```
+
+Run the tests (data contracts, rule engine, trust score, value-chain map):
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+The same tests run in GitHub Actions on every push, and the site only deploys when they pass.
 
 `pipeline/run.py` takes a few seconds. It rebuilds `app/data/fieldtrust.json` and writes SQLite databases to `data/` so you can query each layer:
 
