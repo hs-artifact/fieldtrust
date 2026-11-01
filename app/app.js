@@ -46,6 +46,7 @@ const DOMAINS = {
 };
 const VIEWS = [
   { id: "overview", label: "Overview", group: "Story", icon: "M3 12l9-8 9 8M5 10v10h14V10" },
+  { id: "framework", label: "Framework", group: "Story", icon: "M4 4h16v4H4zM5 10h3v8H5zM10.5 10h3v8h-3zM16 10h3v8h-3zM4 20h16" },
   { id: "case-study", label: "Case study", group: "Story", icon: "M5 4h10l4 4v12H5zM14 4v5h5M8 13h8M8 17h6" },
   { id: "pipeline", label: "Data engineering", group: "Data", icon: "M4 6h6v4H4zM14 14h6v4h-6zM10 8h4v8M4 16h6" },
   { id: "quality", label: "Data quality", group: "Data", icon: "M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM8.5 12l2.5 2.5 4.5-5" },
@@ -53,6 +54,7 @@ const VIEWS = [
   { id: "operations", label: "Digital operations", group: "Run & change", icon: "M3 12h4l2-6 4 12 2-6h6" },
   { id: "transformation", label: "Transformation", group: "Run & change", icon: "M4 17l5-5 4 4 7-8M15 8h5v5" },
   { id: "adoption", label: "Change & adoption", group: "Run & change", icon: "M8 11a3 3 0 100-6 3 3 0 000 6zM16 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 2.5-5 5-5s5 2 5 5M13 15.5c.9-.3 2-.5 3-.5 2.5 0 5 2 5 5" },
+  { id: "playbook", label: "Playbook", group: "Run & change", icon: "M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11M9 8h6" },
 ];
 const STAGES = ["Requirement", "Built", "Factory test", "Field acceptance", "Accepted", "Value realised"];
 const SERIES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
@@ -171,7 +173,7 @@ function lineChart(host, o) {
       const idx = sr.values.map((v, i) => v == null ? null : i).filter(i => i != null);
       if (idx.length) s += `<path d="${d}L${X(idx[idx.length - 1])},${Y(lo)}L${X(idx[0])},${Y(lo)}Z" style="fill:${sr.color}" opacity=".10"/>`;
     }
-    s += `<path class="draw" d="${d}" fill="none" style="stroke:${sr.color}" stroke-width="${sr.width || 2}" stroke-linejoin="round" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ""}/>`;
+    s += `<path class="${o.noAnim ? "" : "draw"}" d="${d}" fill="none" style="stroke:${sr.color}" stroke-width="${sr.width || 2}" stroke-linejoin="round" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ""}/>`;
     if (sr.dots) sr.values.forEach((v, i) => { if (v != null) s += `<circle cx="${X(i)}" cy="${Y(v)}" r="3.2" style="fill:${sr.color};stroke:var(--surface)" stroke-width="2"/>`; });
     const li = sr.values.map((v, i) => v == null ? -1 : i).filter(i => i >= 0).pop();
     if (li != null) s += `<circle cx="${X(li)}" cy="${Y(sr.values[li])}" r="4.5" style="fill:${sr.color};stroke:var(--surface)" stroke-width="2"/>`;
@@ -182,6 +184,7 @@ function lineChart(host, o) {
     for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 15) labs[i].y = labs[i - 1].y + 15;
     labs.forEach(l => { s += `<text x="${m.l + iw + 10}" y="${l.y + 4}" style="fill:var(--ink-2);font-family:var(--f-body);font-size:12px">${esc(l.sr.name)} <tspan style="fill:var(--ink);font-weight:600">${(o.fmtV || fy)(l.v)}</tspan></text>`; });
   }
+  if (o.cursor != null) s += `<line x1="${X(o.cursor)}" x2="${X(o.cursor)}" y1="${m.t}" y2="${m.t + ih}" style="stroke:var(--ink-2)" stroke-width="1.2"/><circle cx="${X(o.cursor)}" cy="${m.t + ih}" r="3" style="fill:var(--ink-2)"/>`;
   s += `<line class="xh" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" style="stroke:var(--ink-3)" stroke-width="1" opacity="0"/>`;
   o.series.forEach((sr, si) => { s += `<circle class="xd" data-s="${si}" r="4.5" cx="-10" cy="-10" style="fill:${sr.color};stroke:var(--surface)" stroke-width="2" opacity="0"/>`; });
   s += `<rect class="hit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
@@ -258,7 +261,7 @@ function spark(values, color, w = 120, h = 34, opts = {}) {
     ${fluid ? "" : `<circle cx="${X(li)}" cy="${Y(v[li])}" r="2.8" style="fill:${color};stroke:var(--surface)" stroke-width="1.5"/>`}</svg>`;
 }
 
-function gauge(value, was, cap, bandIn) {
+function gauge(value, was, cap, bandIn, noAnim) {
   const band = bandIn || trustBand(value), r = 52, cx = 70, cy = 66, len = Math.PI * r;
   const p = clamp(value / 100, 0, 1), pw = clamp((was ?? 0) / 100, 0, 1);
   const ang = a => [cx - r * Math.cos(Math.PI * a), cy - r * Math.sin(Math.PI * a)];
@@ -266,7 +269,7 @@ function gauge(value, was, cap, bandIn) {
   const colour = band.cls === "good" ? "var(--good)" : band.cls === "warn" ? "var(--warn)" : "var(--crit)";
   return `<svg viewBox="0 0 140 84" width="100%" style="max-width:180px" role="img" aria-label="${esc(cap)} ${fmt(value, 0)} of 100">
     <path d="M${cx - r},${cy} A${r},${r} 0 0 1 ${cx + r},${cy}" fill="none" style="stroke:var(--line)" stroke-width="9" stroke-linecap="round"/>
-    <path class="draw" d="M${cx - r},${cy} A${r},${r} 0 0 1 ${cx + r},${cy}" fill="none" style="stroke:${colour};--len:${len};stroke-dasharray:${len * p} ${len}" stroke-width="9" stroke-linecap="round"/>
+    <path class="${noAnim ? "" : "draw"}" d="M${cx - r},${cy} A${r},${r} 0 0 1 ${cx + r},${cy}" fill="none" style="stroke:${colour};--len:${len};stroke-dasharray:${len * p} ${len}" stroke-width="9" stroke-linecap="round"/>
     ${was != null ? `<circle cx="${wx}" cy="${wy}" r="3.4" style="fill:var(--surface);stroke:var(--ink-3)" stroke-width="1.6"><title>Baseline ${fmt(was, 0)}</title></circle>` : ""}
     <text x="${cx}" y="${cy - 6}" text-anchor="middle" style="fill:var(--ink);font:600 32px var(--f-display)">${fmt(value, 0)}</text>
     <text x="${cx}" y="${cy + 12}" text-anchor="middle" style="fill:var(--ink-3);font:400 10px var(--f-mono)">of 100</text></svg>`;
@@ -298,13 +301,13 @@ V.overview = () => {
   const d = D(), cfg = DOMAINS[S.domain], tr = series("trust"), t = totals(), ad = adoptionNowWas();
   const tiles = cfg.tiles.map(tl => {
     const vals = series(tl.key), now = tl.key === "adoption" ? ad.now : last7(vals), was = tl.key === "adoption" ? ad.was : first7(vals);
-    const big = tl.k ? fmtK(now) : fmt(now, tl.d);
+    const big = tl.k ? fmtK(now) : `<span data-count="${now}" data-dec="${tl.d}">${fmt(now, tl.d)}</span>`;
     return `<div class="panel tile"><div class="lbl">${esc(tl.label)}</div>
       <div class="big num">${big}<small>${esc(tl.unit)}</small></div>
       <div>${spark(vals, "var(--s1)", 220, 36)}</div>
       <div class="foot"><span>${tl.key === "adoption" ? "weekly, all groups" : "7-day avg vs week 1"}${tl.note ? " · " + esc(tl.note) : ""}</span>${chg(now, was, tl.better, tl.d)}</div></div>`;
   }).join("");
-  const moves = d.interventions.map((iv, k) => `<div class="move">
+  const moves = d.interventions.map((iv, k) => `<div class="move" data-iv="${iv.day}">
       <div class="move-top"><span class="marker">${k + 1}</span><span class="when">Day ${iv.day} · ${dLabel(d.trust[iv.day].day)}</span><span class="tag-ppt ${esc(iv.type)}">${esc(iv.type)}</span></div>
       <h3>${esc(iv.title)}</h3><p>${esc(iv.detail)}</p></div>`).join("");
   const worst = [...d.rules].filter(r => r.before_pct > 0).sort((a, b) => b.before_pct - a.before_pct).slice(0, 5);
@@ -317,6 +320,7 @@ V.overview = () => {
           <div style="position:absolute;inset:0 auto 0 0;width:${Math.max(0.6, r.after_pct / maxB * 100)}%;background:var(--s1);border-radius:4px"></div></div></div>
       <span class="num" style="text-align:right;font-size:12.5px"><span style="color:var(--ink-3)">${fmt(r.before_pct, 1)}%</span> → <b>${fmt(r.after_pct, 1)}%</b></span></div>`).join("");
   const lastRun = d.ops.runs[d.ops.runs.length - 1];
+  const n = d.trust.length;
   const html = `
   <section class="hero">
     <div>
@@ -324,18 +328,25 @@ V.overview = () => {
       <h1 class="h1">Field data teams can act on, at any hour</h1>
       <p class="lede">${esc(d.site)}: ${esc(d.description)} Over ${S.data.period.days} days, <b class="num">${fmtInt(t.bronze)}</b> raw records were checked against <b>${t.rules}</b> quality rules before reaching a KPI. Fixing data at source lifted trust, and adoption followed.</p>
       <div class="thesis"><b>field reality</b><i>→</i><b>trusted data</b><i>→</i><b>decisions</b><i>→</i><b>adoption</b></div>
+      <div class="hero-cta"><button type="button" class="btn primary" data-replay="start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>Replay the 90 days</button><a class="btn" href="#framework">See the framework</a></div>
     </div>
     <div class="hero-gauges">
-      <div class="gauge-card"><div class="cap">Data trust score</div>${gauge(last7(tr), first7(tr), "Data trust score")}
-        <div>${pill(trustBand(last7(tr)).cls, trustBand(last7(tr)).label)}</div><div class="delta">from ${fmt(first7(tr), 0)} in week 1</div></div>
-      <div class="gauge-card"><div class="cap">Platform adoption</div>${gauge(ad.now, ad.was, "Platform adoption", adBand(ad.now))}
-        <div>${pill(adBand(ad.now).cls, adBand(ad.now).label)}</div><div class="delta">from ${fmt(ad.was, 0)}% in week 1</div></div>
+      <div class="gauge-card" id="g-trust"></div>
+      <div class="gauge-card" id="g-adopt"></div>
     </div>
   </section>
+  <section class="panel flowviz">
+    ${panelHead("Live pipeline", `Every record passes the quality rules before it can reach a KPI. Records that break a blocking rule drop into quarantine. <span id="flowDay" class="num"></span>`,
+      `<div class="legend"><span><i class="sq" style="background:var(--s1)"></i>Validated</span><span><i class="sq" style="background:var(--s2)"></i>Quarantined</span><span><i class="sq" style="background:var(--accent)"></i>Reaches a KPI</span></div>`)}
+    <div class="flow-canvas"><canvas id="flowc" aria-label="Animated view of records flowing from source systems through quality rules to KPIs"></canvas></div>
+  </section>
   <section class="grid g-4">${tiles}</section>
-  <section class="panel">
-    ${panelHead("Trust leads, adoption follows", "Data trust score (7-day rolling, daily in grey) and weekly share of target users active on the platform. Numbered markers are the programme interventions below.",
-      `<div class="legend"><span><i style="background:var(--s1)"></i>Trust score, 7-day</span><span><i style="background:var(--s-muted)"></i>Daily</span><span><i style="background:var(--s3)"></i>Adoption, % of users</span><span><i class="dash"></i>Intervention</span></div>`)}
+  <section class="panel" id="replayPanel">
+    ${panelHead("Trust leads, adoption follows", "Data trust score (7-day rolling, daily in grey) and weekly share of target users active on the platform. Press play to watch the 90 days unfold.",
+      `<div class="replay"><button type="button" class="rp-btn" id="rpPlay" aria-label="Play the 90-day replay"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg></button>
+        <input type="range" id="rpDay" min="0" max="${n - 1}" value="${n - 1}" aria-label="Day of the 90-day period">
+        <span class="rp-lbl num" id="rpLbl"></span></div>`)}
+    <div class="legend" style="margin:-4px 0 8px"><span><i style="background:var(--s1)"></i>Trust score, 7-day</span><span><i style="background:var(--s-muted)"></i>Daily</span><span><i style="background:var(--s3)"></i>Adoption, % of users</span><span><i class="dash"></i>Intervention</span></div>
     <div class="chart" id="c-hero"></div>
   </section>
   <section class="story">${moves}</section>
@@ -345,21 +356,53 @@ V.overview = () => {
       <p class="note" style="margin:10px 0 0">See every rule and its SQL on <a href="#quality">Data quality</a>.</p></div>
     <div class="panel">${panelHead("Pipeline at a glance", `Latest run ${dLabel(lastRun.day)} · ${esc(lastRun.status)}`)}
       <div class="grid g-2" style="gap:14px">
-        ${[["Raw records (bronze)", fmtInt(t.bronze)], ["Trusted records (silver)", fmtInt(t.silver)], ["Quarantined", fmtInt(t.quarantined)], ["Promoted with warnings", fmtInt(t.flagged)]]
-          .map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="big num" style="font-size:30px">${v}</div></div>`).join("")}
+        ${[["Raw records (bronze)", t.bronze], ["Trusted records (silver)", t.silver], ["Quarantined", t.quarantined], ["Promoted with warnings", t.flagged]]
+          .map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="big num" style="font-size:30px"><span data-count="${v}" data-dec="0">${fmtInt(v)}</span></div></div>`).join("")}
       </div>
       <p class="note" style="margin:14px 0 0">A record that breaks a blocking rule never reaches a KPI. It waits in quarantine with the rule IDs it broke, routed to a named data steward. <a href="#pipeline">Open the pipeline</a>.</p></div>
   </section>`;
-  const after = () => {
-    const ad7 = new Array(d.trust.length).fill(null);
-    d.adoption.overall.forEach((v, w) => { const i = Math.min(d.trust.length - 1, w * 7 + 6); ad7[i] = v; });
+
+  const ad7 = new Array(n).fill(null);
+  d.adoption.overall.forEach((v, w) => { const i = Math.min(n - 1, w * 7 + 6); ad7[i] = v; });
+  const r7 = roll7(tr);
+  const rateAt = i => { const tot = sum(d.datasets.map(x => x.daily[i].total)), q = sum(d.datasets.map(x => x.daily[i].quarantined)); return { tot, q, rate: q / tot }; };
+  const setDay = (day, anim) => {
+    const cut = a => a.map((v, i) => i <= day ? v : null);
+    const tNow = mean(tr.slice(Math.max(0, day - 6), day + 1)), w = Math.min(d.adoption.overall.length - 1, Math.floor(day / 7));
+    const aNow = d.adoption.overall[w], tb = trustBand(tNow), ab = adBand(aNow);
+    $("#g-trust").innerHTML = `<div class="cap">Data trust score</div>${gauge(tNow, first7(tr), "Data trust score", null, !anim)}<div>${pill(tb.cls, tb.label)}</div><div class="delta">from ${fmt(first7(tr), 0)} in week 1</div>`;
+    $("#g-adopt").innerHTML = `<div class="cap">Platform adoption</div>${gauge(aNow, ad.was, "Platform adoption", ab, !anim)}<div>${pill(ab.cls, ab.label)}</div><div class="delta">from ${fmt(ad.was, 0)}% in week 1</div>`;
     lineChart($("#c-hero"), {
       x: d.trust.map(t => t.day), h: 300, yMin: 20, yMax: 100, ticks: [20, 40, 60, 80, 100], band: { from: 90, to: 100, label: "Decision-grade ≥ 90" },
-      series: [{ name: "Daily score", color: "var(--s-muted)", values: tr, width: 1.2, noLabel: true },
-               { name: "Data trust score", color: "var(--s1)", values: roll7(tr), area: true, width: 2.4 },
-               { name: "Adoption", color: "var(--s3)", values: ad7, connect: true, dots: true, width: 2.2 }],
-      markers: ivMarkers(), direct: true, fmtV: v => fmt(v, 0), label: "Trust score and adoption over 90 days",
+      series: [{ name: "Daily score", color: "var(--s-muted)", values: cut(tr), width: 1.2, noLabel: true },
+               { name: "Data trust score", color: "var(--s1)", values: cut(r7), area: true, width: 2.4 },
+               { name: "Adoption", color: "var(--s3)", values: cut(ad7), connect: true, dots: true, width: 2.2 }],
+      markers: ivMarkers(), direct: true, fmtV: v => fmt(v, 0), label: "Trust score and adoption over 90 days", noAnim: !anim, cursor: day < n - 1 ? day : null,
     });
+    $("#rpLbl").textContent = `${dLabel(d.trust[day].day)} · day ${day + 1}`;
+    $("#rpDay").value = day;
+    $$(".move").forEach(m => m.classList.toggle("off", +m.dataset.iv > day));
+    const r = rateAt(day);
+    FLOW.rate = r.rate; FLOW.stats = { tot: r.tot, q: r.q, rate: r.rate, trust: tNow };
+    $("#flowDay").textContent = `${dLabel(d.trust[day].day)}: ${fmtInt(r.tot)} records, ${fmt(r.rate * 100, 1)}% quarantined.`;
+  };
+  const after = () => {
+    setDay(n - 1, true);
+    startFlow($("#flowc"));
+    const btn = $("#rpPlay"), slider = $("#rpDay");
+    const playIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>`;
+    const pauseIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>`;
+    const stop = () => { clearInterval(REPLAY.timer); REPLAY.timer = null; btn.innerHTML = playIcon; btn.setAttribute("aria-label", "Play the 90-day replay"); };
+    const play = () => {
+      let day = +slider.value; if (day >= n - 1) day = 0;
+      btn.innerHTML = pauseIcon; btn.setAttribute("aria-label", "Pause the replay");
+      setDay(day, false);
+      REPLAY.timer = setInterval(() => { day++; setDay(day, false); if (day >= n - 1) stop(); }, 120);
+    };
+    btn.addEventListener("click", () => REPLAY.timer ? stop() : play());
+    slider.addEventListener("input", () => { stop(); setDay(+slider.value, false); });
+    REPLAY.play = () => { $("#replayPanel").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); stop(); slider.value = 0; play(); };
+    countUp($("#view"));
   };
   return [html, after];
 };
@@ -694,7 +737,9 @@ V["case-study"] = () => {
   </section>
   <section class="grid g-2">
     <div class="panel">${panelHead("What each part demonstrates", "")}
-      ${[["Data engineering", "pipeline", "Medallion pipeline, contract-driven rules, quarantine, reproducible runs"],
+      ${[["The framework", "framework", "People, process and technology from one goal tree, grounded in data"],
+         ["Playbook", "playbook", "Normal and edge cases with root cause and resolution"],
+         ["Data engineering", "pipeline", "Medallion pipeline, contract-driven rules, quarantine, reproducible runs"],
          ["Data governance", "governance", "Ownership, stewardship, KPI glossary, RACI, lineage"],
          ["Data quality", "quality", "Five dimensions, rule catalogue, before/after evidence"],
          ["Digital operations", "operations", "24×7 monitoring, SLA, incidents, MTTR, runbook"],
@@ -718,6 +763,328 @@ V["case-study"] = () => {
   return [html, null];
 };
 
+// ---------------------------------------------------------------- motion helpers
+const REDUCED = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const REPLAY = { timer: null, play: null };
+const FLOW = { raf: 0, rate: 0.05, parts: [], canvas: null };
+
+function countUp(root) {
+  if (REDUCED()) return;
+  $$("[data-count]", root).forEach(el => {
+    const to = +el.dataset.count, dec = +el.dataset.dec || 0, t0 = performance.now(), dur = 900;
+    const step = now => {
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = dec ? fmt(to * e, dec) : fmtInt(to * e);
+      if (p < 1) requestAnimationFrame(step); else el.textContent = dec ? fmt(to, dec) : fmtInt(to);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+function stopFlow() { cancelAnimationFrame(FLOW.raf); FLOW.raf = 0; FLOW.parts = []; }
+
+function startFlow(canvas) {
+  stopFlow();
+  if (!canvas) return;
+  FLOW.canvas = canvas;
+  const ctx = canvas.getContext("2d");
+  const cs = () => getComputedStyle(document.documentElement);
+  let col = {}, W = 0, H = 0, dpr = 1, frame = 0;
+  const readCols = () => { const s = cs(); col = { s1: s.getPropertyValue("--s1").trim(), s2: s.getPropertyValue("--s2").trim(), ac: s.getPropertyValue("--accent").trim(), ink: s.getPropertyValue("--ink").trim(), ink3: s.getPropertyValue("--ink-3").trim(), line: s.getPropertyValue("--line").trim(), sf: s.getPropertyValue("--surface-2").trim() }; };
+  const size = () => { dpr = Math.min(2, devicePixelRatio || 1); W = canvas.clientWidth; H = canvas.clientHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  readCols(); size();
+  const narrow = () => W < 560;
+  let NODES = null;
+  const node = () => { if (!NODES || NODES.W !== W || NODES.H !== H) { NODES = computeNode(); NODES.W = W; NODES.H = H; } return NODES; };
+  const computeNode = () => {
+    const y = H * 0.40, srcX = narrow() ? 26 : 112;
+    return {
+      src: [0, 1, 2].map(k => ({ x: srcX, y: y + (k - 1) * (narrow() ? 26 : 34) })),
+      bronze: { x: W * (narrow() ? 0.27 : 0.30), y }, rules: { x: W * (narrow() ? 0.5 : 0.52), y }, silver: { x: W * 0.72, y }, gold: { x: W - (narrow() ? 30 : 80), y }, quar: { x: W * (narrow() ? 0.5 : 0.52), y: H * 0.86 },
+    };
+  };
+  const SHORT = { historian_well_hourly: "Historian", daily_production_report: "Daily report", fiscal_meter_daily: "Fiscal meter", fms_haul_cycles: "FMS cycles", wim_tickets: "Weighbridge", fatigue_alerts: "Fatigue alerts" };
+  const names = () => D().datasets.map(x => SHORT[x.name] || x.name);
+  const spawn = () => {
+    const N = node(), k = Math.floor(Math.random() * 3), s = N.src[k];
+    FLOW.parts.push({ x: s.x, y: s.y, path: [N.bronze, N.rules], seg: 0, sp: 1.4 + Math.random() * 0.9, kind: "ok", life: 0, jitter: (Math.random() - 0.5) * 10 });
+  };
+  const label = (txt, x, y, align = "center", c = col.ink3, size = 10.5) => { ctx.fillStyle = c; ctx.font = `500 ${size}px "IBM Plex Mono", ui-monospace, monospace`; ctx.textAlign = align; ctx.fillText(txt, x, y); };
+  const box = (x, y, w, h, stroke) => { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - w / 2, y - h / 2, w, h, 7) : ctx.rect(x - w / 2, y - h / 2, w, h); ctx.fillStyle = col.sf; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = stroke; ctx.stroke(); };
+  const draw = () => {
+    if (!canvas.isConnected) { stopFlow(); return; }
+    if (frame % 60 === 0) readCols();
+    frame++;
+    const N = node(), nm = names();
+    ctx.clearRect(0, 0, W, H);
+    // guide lines
+    ctx.strokeStyle = col.line; ctx.lineWidth = 1; ctx.setLineDash([3, 5]);
+    ctx.beginPath(); N.src.forEach(s => { ctx.moveTo(s.x, s.y); ctx.lineTo(N.bronze.x, N.bronze.y); });
+    ctx.moveTo(N.bronze.x, N.bronze.y); ctx.lineTo(N.gold.x, N.gold.y); ctx.moveTo(N.rules.x, N.rules.y); ctx.lineTo(N.quar.x, N.quar.y); ctx.stroke(); ctx.setLineDash([]);
+    // particles
+    const spawnRate = narrow() ? 0.35 : 0.6;
+    if (Math.random() < spawnRate) spawn();
+    const divert = Math.min(0.6, FLOW.rate * 2.6);
+    for (const p of FLOW.parts) {
+      const tgt = p.path[p.seg];
+      if (!tgt) { p.dead = true; continue; }
+      const ty = tgt.y + (tgt === N.quar ? 0 : p.jitter * 0.4), dx = tgt.x - p.x, dy = ty - p.y, dist = Math.hypot(dx, dy);
+      if (dist < p.sp + 1) {
+        p.x = tgt.x; p.y = ty; p.seg++;
+        if (tgt === N.rules) {
+          if (Math.random() < divert) { p.kind = "bad"; p.path = [N.rules, N.quar]; p.seg = 1; }
+          else { p.path = [N.rules, N.silver, N.gold]; p.seg = 1; }
+        }
+        if (tgt === N.gold) { p.kind = "gold"; p.life = 1; p.path = []; }
+        if (tgt === N.quar) { p.kind = "badhold"; p.life = 1; p.path = []; }
+      } else { p.x += dx / dist * p.sp; p.y += dy / dist * p.sp; }
+    }
+    for (const p of FLOW.parts) {
+      let c = p.kind === "bad" || p.kind === "badhold" ? col.s2 : p.kind === "gold" ? col.ac : col.s1, r = 2.6, a = 1;
+      if (p.kind === "gold" || p.kind === "badhold") { p.life -= 0.035; a = Math.max(0, p.life); r = 2.6 + (1 - p.life) * 6; if (p.life <= 0) p.dead = true; }
+      ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fillStyle = c; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // nodes
+    N.src.forEach((s, k) => { ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, 7); ctx.fillStyle = col.ink3; ctx.fill(); if (!narrow()) label(nm[k] || "", s.x - 10, s.y + 4, "right", col.ink3, 10.5); });
+    if (narrow()) label("SOURCES", N.src[0].x, N.src[0].y - 14, "center", col.ink3, 9);
+    if (FLOW.stats) { const st = FLOW.stats, sub = (t, x, y, c) => label(t, x, y, "center", c || col.ink3, narrow() ? 9 : 10);
+      sub(`${fmtInt(st.tot)}/day`, N.bronze.x, N.bronze.y + 30); label(`${fmt(st.rate * 100, 1)}% held`, N.quar.x + 8, N.quar.y - 20, "left", col.s2, narrow() ? 9 : 10);
+      sub(`${fmtInt(st.tot - st.q)}/day`, N.silver.x, N.silver.y + 30); sub(`trust ${fmt(st.trust, 0)}`, N.gold.x, N.gold.y + 30, col.ac); }
+    const bw = narrow() ? 54 : 92;
+    box(N.bronze.x, N.bronze.y, bw, 30, "#a86b3c"); label("BRONZE", N.bronze.x, N.bronze.y + 4, "center", col.ink, narrow() ? 9 : 10.5);
+    box(N.rules.x, N.rules.y, bw, 30, col.ac); label(narrow() ? "RULES" : "QUALITY RULES", N.rules.x, N.rules.y + 4, "center", col.ac, narrow() ? 9 : 10.5);
+    box(N.silver.x, N.silver.y, bw, 30, "#9aa7ad"); label("SILVER", N.silver.x, N.silver.y + 4, "center", col.ink, narrow() ? 9 : 10.5);
+    box(N.gold.x, N.gold.y, narrow() ? 46 : 86, 30, "#d4a72c"); label("KPI", N.gold.x, N.gold.y + 4, "center", col.ink, narrow() ? 9 : 10.5);
+    box(N.quar.x, N.quar.y, narrow() ? 92 : 120, 26, col.s2); label("QUARANTINE", N.quar.x, N.quar.y + 4, "center", col.s2);
+    FLOW.parts = FLOW.parts.filter(p => !p.dead).slice(-260);
+    if (!REDUCED()) FLOW.raf = requestAnimationFrame(draw);
+  };
+  if (REDUCED()) {
+    for (let i = 0; i < 120; i++) { spawn(); for (const p of FLOW.parts) { p.x += (Math.random() * 0.8) * (W * 0.6); } }
+    FLOW.parts = FLOW.parts.filter(p => p.x < W * 0.5);
+  }
+  canvas._resize = () => { size(); };
+  FLOW.raf = requestAnimationFrame(draw);
+}
+
+// ---------------------------------------------------------------- what-if model
+function whatIf(on) {
+  const d = D(), tr = d.trust.map(t => t.trust), n = tr.length, ivs = d.interventions;
+  const bounds = [0, ...ivs.map(iv => iv.day), n];
+  const segMean = k => mean(tr.slice(bounds[k], bounds[k + 1]));
+  const lifts = ivs.map((iv, k) => segMean(k + 1) - segMean(k));
+  const trust = tr.map((v, t) => {
+    let x = v;
+    ivs.forEach((iv, k) => { if (!on[iv.type]) x -= lifts[k] * clamp((t - iv.day) / 7, 0, 1); });
+    return clamp(x, 0, 100);
+  });
+  const weeks = d.adoption.overall.length, O = d.adoption.overall, base = O[0];
+  const tw = w => mean(trust.slice(w * 7, w * 7 + 7)), twObs = w => mean(tr.slice(w * 7, w * 7 + 7));
+  const t0 = twObs(0);
+  const sim = (twf, sens) => { let prev = base; const out = []; for (let w = 0; w < weeks; w++) { const lag = twf(Math.max(0, w - 2)); const target = base + sens * (lag - t0); prev = prev + 0.55 * (target - prev); out.push(clamp(prev, 0, 100)); } return out; };
+  const end1 = sim(twObs, 1).at(-1);
+  const sens = (O.at(-1) - base) / Math.max(1e-6, end1 - base);
+  const mult = (on.people ? 1 : 0.35) * (on.process ? 1 : 0.7);
+  const adoption = sim(tw, sens * mult);
+  return { trust, adoption, observedTrust: tr, observedAdoption: O };
+}
+function whatIfVerdict(on, r) {
+  const off = ["technology", "process", "people"].filter(x => !on[x]);
+  if (!off.length) return "All three together: the data becomes decision-grade and people use it on every shift.";
+  const t = Math.round(last7(r.trust)), a = r.adoption.at(-1), A = r.observedAdoption.at(-1), gap = A - a;
+  const s1 = t >= 90 ? `The data still reaches decision-grade (trust ${fmt(t, 0)}).` : `The data stays below decision-grade (trust ${fmt(t, 0)}).`;
+  const s2 = gap > 1 ? `Adoption ends at ${fmt(a, 0)}%, ${fmt(gap, 0)} points short of the ${fmt(A, 0)}% reached with all three.` : `Adoption ends at ${fmt(a, 0)}%.`;
+  const s3 = off.length === 3 ? "Nothing changes: the baseline continues." : !on.people ? "Better data alone does not change how people work." : !on.process ? "Without SOPs, nothing holds the change in place." : "Engagement cannot fix numbers that are wrong at source.";
+  return `${s1} ${s2} ${s3}`;
+}
+
+// ---------------------------------------------------------------- framework view
+const PILLAR_ICON = {
+  strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 100 8 4 4 0 000-8z",
+  people: "M8 11a3 3 0 100-6 3 3 0 000 6zM16 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 2.5-5 5-5s5 2 5 5M13 15.5c.9-.3 2-.5 3-.5 2.5 0 5 2 5 5",
+  process: "M4 6h10M4 12h16M4 18h10M17 4l3 2-3 2M17 16l3 2-3 2",
+  technology: "M4 5h16v10H4zM9 19h6M12 15v4",
+  data: "M12 4c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3",
+  governance: "M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z",
+  value: "M4 17l5-5 4 4 7-8M15 8h5v5",
+};
+const icon = (id, cls = "") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${PILLAR_ICON[id]}"/></svg>`;
+
+function pillarKpis(id) {
+  const d = D(), tr = d.trust.map(t => t.trust), ad = adoptionNowWas(), ak = d.change.adkar;
+  const L = ["Awareness", "Desire", "Knowledge", "Ability", "Reinforcement"];
+  const avg = which => L.map((_, k) => mean(d.change.adkar_groups.map(g => ak[which][g][k])));
+  const nowA = avg("current"), weakest = L[nowA.indexOf(Math.min(...nowA))];
+  const mat = d.maturity, mNow = mean(mat.map(m => m.now)), mWas = mean(mat.map(m => m.baseline));
+  const acc = d.transformation.filter(x => x.stage >= 4).length, val = d.transformation.filter(x => x.stage === 5).length;
+  const o = d.ops, rc = series("recon_error_pct");
+  const k = (l, v, sub) => ({ l, v, sub });
+  return {
+    strategy: [k("Strategic objective", "1", d.goal_tree.objective), k("Operational KPIs with targets", d.goal_tree.kpis.length, d.goal_tree.kpis.map(x => x.kpi).join(" · "))],
+    people: [k("Adoption", `${fmt(ad.was, 0)} → ${fmt(ad.now, 0)}%`, "share of target users active weekly"), k("Weakest ADKAR element now", weakest, "where the next action goes"), k("Stakeholder layers engaged", d.layers.length, "frontline to leadership")],
+    process: [k("Procedures & SOPs from the approach", d.layers.length, "one per stakeholder layer"), k("Capabilities accepted in the field", `${acc} of ${d.transformation.length}`, "requirement → acceptance → evidence"), k("Timeliness", `${fmt(first7(d.dimensions.timeliness), 0)} → ${fmt(last7(d.dimensions.timeliness), 0)}%`, "data entered inside its SLA")],
+    technology: [k("Availability, last month", `${fmt(o.sla.at(-1).availability, 2)}%`, `target ${o.sla_target}%`), k("Mean time to restore", `${fmt(o.mttr_before, 1)} → ${fmt(o.mttr_after, 1)} h`, "before vs after the first fix"), k("Records validated per day", fmtInt(totals().bronze / d.trust.length), "through the medallion pipeline")],
+    data: [k("Data trust score", `${fmt(first7(tr), 0)} → ${fmt(last7(tr), 0)}`, trustBand(last7(tr)).label), k("Rule pass rate", `${fmt(last7(d.trust.map(t => t.pass_rate)), 1)}%`, "last 7 days, all sources"), k("Reconciliation", `${fmt(first7(rc), 1)}% → ${fmt(last7(rc), 1)}%`, "gap against an independent source")],
+    governance: [k("Datasets with owner and steward", `${d.datasets.length} of ${d.datasets.length}`, "named, not shared mailboxes"), k("KPIs in the glossary", d.glossary.length, "one definition, one owner"), k("Governance maturity", `${fmt(mWas, 1)} → ${fmt(mNow, 1)}`, "average of 6 areas, out of 5")],
+    value: [k("Capabilities with value realised", `${val} of ${d.transformation.length}`, "recorded only once it shows in operations"), k("Strategic objective", "", d.goal_tree.objective)],
+  }[id];
+}
+
+V.framework = () => {
+  const F = S.data.framework, d = D(), P = Object.fromEntries(F.pillars.map(p => [p.id, p]));
+  const sel = S.sel.fw || "people";
+  const nodeBtn = (id, extra = "") => {
+    const p = P[id];
+    return `<button type="button" class="fw-node fw-${id} ${extra}" data-sel="fw" data-v="${id}" aria-pressed="${sel === id}">
+      <span class="fw-ic">${icon(id)}</span><span class="fw-tx"><span class="fw-name">${esc(p.name)}</span><span class="fw-q">${esc(p.question)}</span></span></button>`;
+  };
+  const p = P[sel], kp = pillarKpis(sel);
+  const detail = `<div class="fw-detail">
+      <div class="fw-dh"><span class="fw-ic big">${icon(sel)}</span><div><div class="eyebrow">${esc(p.name)}</div><h2 class="fw-dq">${esc(p.question)}</h2></div></div>
+      <div class="grid g-21" style="gap:22px;margin-top:14px">
+        <div><div class="lbl-sm">What I do</div><ul class="fw-list">${p.do.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+          <div class="lbl-sm" style="margin-top:14px">Frameworks</div><div class="stack">${p.frameworks.map(x => `<span class="chip">${esc(x)}</span>`).join("")}</div></div>
+        <div class="fw-kpis"><div class="lbl-sm">In ${esc(d.site)}</div>${kp.map(x => `<div class="fw-kpi"><div class="l">${esc(x.l)}</div>${x.v !== "" ? `<div class="v num">${esc(String(x.v))}</div>` : ""}<div class="s">${esc(x.sub)}</div></div>`).join("")}
+          <a class="btn" href="#${p.evidence}" style="margin-top:12px">See the evidence <span aria-hidden="true">→</span></a></div>
+      </div></div>`;
+  const ffp = [
+    ["On purpose", `${d.glossary.length}/${d.glossary.length}`, "KPIs with a named owner"],
+    ["On time", `${fmt(last7(d.dimensions.timeliness), 1)}%`, "inside freshness SLA, last 7 days"],
+    ["Relevant", `${fmt(last7(d.dimensions.uniqueness), 1)}%`, "at contract grain, no duplicates"],
+    ["Trusted", fmt(last7(d.trust.map(t => t.trust)), 0), "trust score, validated and reconciled"],
+  ];
+  const quadCls = q => q === "Manage closely" ? "accent" : "";
+  const layers = d.layers.map((l, i) => `<tr><td><div class="ly-n"><span class="ly-i num">${i + 1}</span><b>${esc(l.layer)}</b></div></td>
+      <td>${esc(l.goal)}</td><td>${esc(l.pain)}</td>
+      <td><span class="chip ${quadCls(l.quadrant)}">${esc(l.quadrant)}</span><div class="note" style="margin-top:4px">ADKAR: ${esc(l.adkar_focus)}</div><div style="margin-top:4px">${esc(l.approach)}</div></td>
+      <td>${esc(l.process)}</td><td>${esc(l.technology)}</td><td class="mono" style="font-size:12px">${esc(l.signal)}</td></tr>`).join("");
+  const gt = d.goal_tree;
+  const tree = `<div class="gt">
+      <div class="gt-obj"><div class="lbl-sm">Strategic objective</div><div class="gt-ot">${esc(gt.objective)}</div></div>
+      <div class="gt-rows">${gt.kpis.map(k => `<div class="gt-row"><div class="gt-kpi"><div class="t">${esc(k.kpi)}</div><div class="s">${esc(k.target)}</div></div>
+        <div class="gt-arrow" aria-hidden="true">→</div><div class="gt-data">${k.data.map(x => `<div>${esc(x)}</div>`).join("")}</div></div>`).join("")}</div></div>`;
+  const mat = d.maturity.map(m => `<div class="mat"><div class="mat-h"><span>${esc(m.area)}</span><span class="num"><span style="color:var(--ink-3)">${m.baseline}</span> → <b>${m.now}</b> / 5</span></div>
+      <div class="mat-bar"><i style="width:${m.baseline * 20}%" class="was"></i><i style="width:${m.now * 20}%" class="now"></i></div></div>`).join("");
+  const on = S.sel.wi || { technology: true, process: true, people: true };
+  S.sel.wi = on;
+  const tgl = d.interventions.map(iv => `<button type="button" class="tgl ${iv.type}" data-wi="${iv.type}" aria-pressed="${!!on[iv.type]}"><span class="sw"><i></i></span><span><b>${esc(iv.type[0].toUpperCase() + iv.type.slice(1))}</b><small>${esc(iv.title)}</small></span></button>`).join("");
+  const html = `
+  ${header("The framework", F.name, esc(F.thesis))}
+  <section class="panel fw-panel">
+    <div class="fw">
+      <div class="fw-top">${nodeBtn("strategy")}<div class="fw-loop" aria-hidden="true"><span>measure, learn, feed back</span></div>${nodeBtn("value")}</div>
+      <div class="fw-pillars">${nodeBtn("people", "pillar")}${nodeBtn("process", "pillar")}${nodeBtn("technology", "pillar")}</div>
+      ${nodeBtn("governance", "band")}
+      <button type="button" class="fw-node fw-data band" data-sel="fw" data-v="data" aria-pressed="${sel === "data"}">
+        <span class="fw-ic">${icon("data")}</span><span class="fw-tx"><span class="fw-name">Data foundation</span>
+        <span class="fw-split"><span><b>Data for decisions</b> baselines, pain points, adoption</span><span><b>Data from technology</b> on purpose, on time, relevant, trusted</span></span></span></button>
+    </div>
+    ${detail}
+  </section>
+  <section class="panel">${panelHead("How a cycle runs", "The order matters: goals before tools, and evidence before value.")}
+    <ol class="cycle">${F.cycle.map((c, i) => `<li><span class="cy-n num">${i + 1}</span><div><b>${esc(c.step)}</b><p>${esc(c.detail)}</p></div></li>`).join("")}</ol></section>
+  <section class="panel">${panelHead("What if only one pillar moved?", "Switch an intervention off to see what happens to trust and adoption. The faint line is what actually happened.")}
+    <div class="tgls">${tgl}</div>
+    <div class="grid g-2" style="margin-top:16px">
+      <div><div class="lbl-sm">Data trust score, 7-day</div><div class="chart" id="c-wi-t"></div></div>
+      <div><div class="lbl-sm">Adoption, % of target users</div><div class="chart" id="c-wi-a"></div></div>
+    </div>
+    <div class="wi-out" id="wiOut"></div>
+    <p class="note" style="margin:10px 0 0">A simple model built on this site's data: each intervention's lift in trust is removed when it is switched off, and adoption follows trust with a two-week lag. Engagement (people) and procedures (process) set how strongly adoption responds to better data.</p>
+  </section>
+  <section class="grid g-12">
+    <div class="panel">${panelHead("Fit-for-purpose data", "What technology must deliver for the operation to rely on it.")}
+      <div class="ffp">${ffp.map(([n, v, s], i) => `<div class="ffp-i"><div class="lbl-sm">${n}</div><div class="v num">${v}</div><div class="s">${s}</div><div class="note">${esc(F.fit_for_purpose[i].detail)}</div></div>`).join("")}</div></div>
+    <div class="panel">${panelHead("Goal tree", "Strategy flows down to KPIs, and KPIs down to the data rules that protect them.")}${tree}</div>
+  </section>
+  <section class="panel flush">${panelHead("Stakeholder layers: one approach per layer", "From the frontline to the site leadership. Each layer gets its own goal, pain point, engagement approach, process and technology touchpoint, and a data signal that tells us if it is working.")}
+    <div class="tbl-wrap"><table class="layers"><thead><tr><th>Layer</th><th>Goal</th><th>Pain point</th><th>Approach</th><th>Process</th><th>Technology</th><th>Data signal</th></tr></thead><tbody>${layers}</tbody></table></div></section>
+  <section class="panel">${panelHead("Data governance maturity", "Self-assessed at baseline and now, against a five-level scale.", `<div class="legend"><span><i class="sq" style="background:var(--s-muted)"></i>Baseline</span><span><i class="sq" style="background:var(--s1)"></i>Now</span></div>`)}
+    <div class="mats">${mat}</div></section>`;
+  const after = () => {
+    const draw = () => {
+      const r = whatIf(S.sel.wi);
+      const x = d.trust.map(t => t.day);
+      lineChart($("#c-wi-t"), { x, h: 220, yMin: 40, yMax: 100, ticks: [40, 60, 80, 100], band: { from: 90, to: 100, label: "Decision-grade" },
+        series: [{ name: "Actual", color: "var(--s-muted)", values: roll7(r.observedTrust), width: 1.4 }, { name: "Scenario", color: "var(--s1)", values: roll7(r.trust), width: 2.4, area: true }],
+        markers: ivMarkers(), fmtV: v => fmt(v, 0), label: "Trust score scenario", noAnim: true });
+      lineChart($("#c-wi-a"), { x: d.adoption.weeks, h: 220, yMin: 20, yMax: 100, ticks: [20, 40, 60, 80, 100], xFmt: w => dLabel(w), xFmtLong: w => "Week of " + dLabel(w),
+        series: [{ name: "Actual", color: "var(--s-muted)", values: r.observedAdoption, width: 1.4 }, { name: "Scenario", color: "var(--s3)", values: r.adoption, width: 2.4, dots: true }],
+        markers: ivMarkers(7), unit: "%", fmtV: v => fmt(v, 0), label: "Adoption scenario", noAnim: true });
+      const tEnd = Math.round(last7(r.trust)), aEnd = r.adoption.at(-1), dg = r.trust.slice(-30).filter(v => v >= 90).length;
+      $("#wiOut").innerHTML = `<div class="wi-tiles">
+          <div><div class="lbl-sm">Trust, last 7 days</div><div class="v num">${fmt(tEnd, 0)}</div>${pill(trustBand(tEnd).cls, trustBand(tEnd).label)}</div>
+          <div><div class="lbl-sm">Adoption, final week</div><div class="v num">${fmt(aEnd, 0)}%</div>${pill(adBand(aEnd).cls, adBand(aEnd).label)}</div>
+          <div><div class="lbl-sm">Decision-grade days, last 30</div><div class="v num">${dg}</div></div></div>
+        <p class="verdict">${esc(whatIfVerdict(S.sel.wi, r))}</p>`;
+    };
+    draw();
+    $$("[data-wi]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.wi; S.sel.wi[k] = !S.sel.wi[k]; b.setAttribute("aria-pressed", String(S.sel.wi[k])); draw(); }));
+  };
+  return [html, after];
+};
+
+// ---------------------------------------------------------------- playbook view
+V.playbook = () => {
+  const F = S.data.framework, d = D(), a = d.adoption;
+  const type = S.sel.pbType || "all", pil = S.sel.pbPillar || "all";
+  const PN = Object.fromEntries(F.pillars.map(p => [p.id, p.name]));
+  const cases = F.playbook.filter(c => (type === "all" || c.type === type) && (pil === "all" || c.pillars.includes(pil)));
+  const quadCase = { hl: "E2", lh: "E1", ll: "N1" };
+  const card = c => `<article class="pb ${c.type}" id="case-${c.id}">
+      <div class="pb-top"><span class="chip ${c.type === "edge" ? "accent" : ""}">${c.type === "edge" ? "Edge case" : "Normal case"} · ${esc(c.id)}</span>
+        <span class="pb-pills">${c.pillars.map(p => `<span class="pb-p">${icon(p)}${esc(PN[p])}</span>`).join("")}</span></div>
+      <h3>${esc(c.title)}</h3>
+      <dl class="pb-dl"><dt>What you see</dt><dd>${esc(c.symptom)}</dd><dt>Signal in the data</dt><dd>${esc(c.signal)}</dd><dt>Root cause</dt><dd>${esc(c.root_cause)}</dd></dl>
+      <div class="lbl-sm" style="margin-top:12px">Recommended resolution</div>
+      <ol class="pb-res">${c.resolution.map(r => `<li>${esc(r)}</li>`).join("")}</ol>
+      <p class="pb-ex"><span>In FieldTrust</span>${esc(c.example)}</p></article>`;
+  const typeSel = `<div class="sel" role="group" aria-label="Case type">${[["all", "All"], ["normal", "Normal"], ["edge", "Edge"]].map(([k, l]) => `<button type="button" data-sel="pbType" data-v="${k}" aria-pressed="${type === k}">${l}</button>`).join("")}</div>`;
+  const pilSel = `<div class="sel" role="group" aria-label="Pillar">${[["all", "All pillars"], ...["people", "process", "technology", "data", "governance"].map(k => [k, PN[k]])].map(([k, l]) => `<button type="button" data-sel="pbPillar" data-v="${k}" aria-pressed="${pil === k}">${esc(l)}</button>`).join("")}</div>`;
+  const html = `
+  ${header("Playbook", "Normal cases and the edge cases that sink programmes", "Each case pairs what you see on site with the signal in the data, the root cause, and the resolution I would apply. Start with the quadrant: where trust and adoption sit tells you which pillar to work on.")}
+  <section class="grid g-12">
+    <div class="panel">${panelHead("Where are you?", "Weekly trust against adoption for this site. Click a quadrant to open its case.")}<div class="chart" id="c-quad"></div></div>
+    <div class="panel">${panelHead("Reading the quadrant", "")}
+      <div class="qd-list">
+        <button type="button" class="qd" data-case="E2"><span class="qd-k crit">Low trust · high adoption</span><b>Most dangerous.</b> People act confidently on wrong numbers. Fix the data and make trust visible on every KPI.</button>
+        <button type="button" class="qd" data-case="N1"><span class="qd-k neutral">Low trust · low adoption</span><b>Start here.</b> Discovery first: goals, pain points per layer, baseline data quality.</button>
+        <button type="button" class="qd" data-case="E1"><span class="qd-k warn">High trust · low adoption</span><b>A people problem.</b> Find the weakest ADKAR element and retire the old way.</button>
+        <div class="qd"><span class="qd-k good">High trust · high adoption</span><b>Sustain and scale.</b> Reinforce through reviews, track value, take the next use case.</div>
+      </div></div>
+  </section>
+  <section class="pb-filters">${typeSel}${pilSel}</section>
+  <section class="pb-grid">${cases.map(card).join("") || `<div class="panel note">No cases match these filters.</div>`}</section>`;
+  const after = () => {
+    const host = $("#c-quad"), W = Math.max(260, host.clientWidth), H = 300, m = { t: 14, r: 14, b: 40, l: 44 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const x0 = 50, x1 = 100, y0 = 20, y1 = 100, X = v => m.l + (clamp(v, x0, x1) - x0) / (x1 - x0) * iw, Y = v => m.t + ih - (clamp(v, y0, y1) - y0) / (y1 - y0) * ih;
+    const tx = 90, ty = 60;
+    const quads = [
+      { k: "ll", x: X(x0), y: Y(ty), w: X(tx) - X(x0), h: Y(y0) - Y(ty), fill: "var(--surface-2)", lab: "Start here", c: "N1" },
+      { k: "lh", x: X(tx), y: Y(ty), w: X(x1) - X(tx), h: Y(y0) - Y(ty), fill: "var(--warn-soft)", lab: "People gap", c: "E1" },
+      { k: "hl", x: X(x0), y: Y(y1), w: X(tx) - X(x0), h: Y(ty) - Y(y1), fill: "var(--crit-soft)", lab: "Danger", c: "E2" },
+      { k: "hh", x: X(tx), y: Y(y1), w: X(x1) - X(tx), h: Y(ty) - Y(y1), fill: "var(--good-soft)", lab: "Sustain", c: null },
+    ];
+    let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Trust versus adoption quadrant with this site's weekly path">`;
+    quads.forEach(q => { s += `<rect class="qrect" ${q.c ? `data-case="${q.c}" style="fill:${q.fill};cursor:pointer"` : `style="fill:${q.fill}"`} x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}"/>`;
+      s += `<text x="${q.x + 8}" y="${q.y + 16}" style="fill:var(--ink-2);font-weight:600;pointer-events:none">${q.lab}</text>`; });
+    [50, 60, 70, 80, 90, 100].forEach(t => { s += `<text x="${X(t)}" y="${H - 22}" text-anchor="middle">${t}</text>`; });
+    [20, 40, 60, 80, 100].forEach(t => { s += `<text x="${m.l - 8}" y="${Y(t) + 4}" text-anchor="end">${t}%</text>`; });
+    s += `<text x="${m.l + iw / 2}" y="${H - 4}" text-anchor="middle">Data trust score (weekly)</text>`;
+    const pts = a.trust_weekly.map((t, i) => [X(t), Y(a.overall[i])]);
+    s += `<path class="draw" d="M${pts.map(p => p.map(v => v.toFixed(1)).join(",")).join("L")}" fill="none" style="stroke:var(--ink-2)" stroke-width="1.6" stroke-dasharray="none"/>`;
+    pts.forEach((p, i) => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="${i === pts.length - 1 ? 6 : 4}" style="fill:${i === pts.length - 1 ? "var(--accent)" : "var(--s1)"};stroke:var(--surface)" stroke-width="2" data-tt="${esc(`<div class="tt-h">Week ${i + 1}</div>${ttRow("Trust", "var(--s1)", fmt(a.trust_weekly[i], 1))}${ttRow("Adoption", "var(--s3)", fmt(a.overall[i], 1) + "%")}`)}"/>`; });
+    s += `<text x="${pts.at(-1)[0] - 8}" y="${pts.at(-1)[1] - 10}" text-anchor="end" style="fill:var(--ink);font-weight:600">now</text>`;
+    s += `<text x="${pts[0][0] + 8}" y="${pts[0][1] + 16}" style="fill:var(--ink-2)">week 1</text></svg>`;
+    host.innerHTML = s;
+    $$("path.draw", host).forEach(p => { try { p.style.setProperty("--len", Math.ceil(p.getTotalLength()) + 1); } catch { p.classList.remove("draw"); } });
+    const open = id => { S.sel.pbType = "all"; S.sel.pbPillar = "all"; render(false); const el = $("#case-" + id); if (el) { el.scrollIntoView({ behavior: REDUCED() ? "auto" : "smooth", block: "center" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); } };
+    $$("[data-case]").forEach(el => el.addEventListener("click", () => open(el.dataset.case)));
+  };
+  return [html, after];
+};
+
 // ---------------------------------------------------------------- shell
 function renderNav() {
   let html = "", g = "";
@@ -737,7 +1104,7 @@ function renderTop() {
 }
 let afterFn = null;
 function render(animate = true) {
-  hideTT();
+  hideTT(); stopFlow(); if (REPLAY.timer) { clearInterval(REPLAY.timer); REPLAY.timer = null; }
   renderNav(); renderTop();
   const [html, after] = (V[S.view] || V.overview)();
   const view = $("#view");
@@ -757,6 +1124,8 @@ function route() {
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-domain]");
   if (b) { S.domain = b.dataset.domain; store.set("ft-domain", S.domain); S.sel = {}; render(true); return; }
+  const rp = e.target.closest("[data-replay]");
+  if (rp) { if (REPLAY.play) REPLAY.play(); return; }
   const s = e.target.closest("[data-sel]");
   if (s) { S.sel[s.dataset.sel] = s.dataset.v; const y = scrollY; render(false); window.scrollTo({ top: y }); }
 });
