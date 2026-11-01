@@ -224,6 +224,7 @@ def main():
               "period": {"start": START.strftime("%Y-%m-%d"),
                          "end": (START + dt.timedelta(days=DAYS - 1)).strftime("%Y-%m-%d"), "days": DAYS},
               "framework": yaml.safe_load((ROOT / "governance" / "framework.yml").read_text()),
+              "valuechain": yaml.safe_load((ROOT / "governance" / "valuechain.yml").read_text()),
               "domains": {}}
     for domain in ("oil_gas", "mining"):
         rep = run_domain(domain, bronze[domain], DB_DIR / f"{domain}.db")
