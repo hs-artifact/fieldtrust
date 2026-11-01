@@ -223,6 +223,7 @@ def main():
     bundle = {"generated_at": dt.datetime(2026, 11, 1, 6, 0).isoformat(),
               "period": {"start": START.strftime("%Y-%m-%d"),
                          "end": (START + dt.timedelta(days=DAYS - 1)).strftime("%Y-%m-%d"), "days": DAYS},
+              "framework": yaml.safe_load((ROOT / "governance" / "framework.yml").read_text()),
               "domains": {}}
     for domain in ("oil_gas", "mining"):
         rep = run_domain(domain, bronze[domain], DB_DIR / f"{domain}.db")
@@ -260,6 +261,7 @@ def main():
             lineage=build_lineage(rep, programme),
             glossary=programme["glossary"], raci=programme["raci"],
             transformation=programme["transformation"], change=programme["change"],
+            goal_tree=programme["goal_tree"], layers=programme["layers"], maturity=programme["maturity"],
             adoption=build_adoption(domain, trust, rng),
             ops=build_ops(domain, rep, rng),
         )
