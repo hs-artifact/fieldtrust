@@ -1,0 +1,247 @@
+# Field-to-Decision Transformation Framework
+# The operating model behind FieldTrust. Shared by both domain packs.
+
+name: Field-to-Decision Transformation Framework
+thesis: >
+  Digital transformation succeeds when people, process and technology are
+  designed together from the same goals and pain points, and every decision
+  along the way is grounded in data that is fit for purpose.
+
+cycle:
+  - step: Strategy & goals
+    detail: Start from the business objective and the operational KPIs that prove it. Agree what "better" means before choosing any tool.
+  - step: Discover with data
+    detail: Baseline the KPIs and the data behind them. Map goals and pain points for every stakeholder layer, from frontline crews to leadership.
+  - step: Design aligned approach
+    detail: Set the people strategy per layer, build the programme and SOPs from it, and select technology that fits the goal and the process.
+  - step: Implement & accept
+    detail: Requirement, acceptance criterion and evidence for every capability, tested in real shift conditions and signed in the field.
+  - step: Measure & sustain
+    detail: Track data trust, adoption and realised value. Feed the results back into strategy and the next iteration.
+
+pillars:
+  - id: strategy
+    name: Strategy & goals
+    question: What outcome must the operation deliver, and how will we know?
+    do:
+      - Translate the strategic objective into operational KPIs and data requirements (goal tree)
+      - Agree targets and acceptance thresholds with the KPI owners
+      - Prioritise use cases by value and feasibility
+    frameworks: [Goal tree, KPI owner model, Value / feasibility prioritisation]
+    evidence: framework
+  - id: people
+    name: People
+    question: Who has to change, from operator to executive, and what will make them?
+    do:
+      - Identify goals and pain points for every stakeholder layer, from frontline crews to the site leadership
+      - Map each group on power and interest (Mendelow) to set how closely it is engaged
+      - Diagnose each group with ADKAR and act on the weakest element; Prosci / Kotter for the organisation-level change plan
+      - Training, coaching and champions on every shift, including nights
+      - Track adoption per group as a KPI, not a feeling
+    frameworks: [Mendelow power/interest, ADKAR, Prosci, Kotter 8 steps, Champion network]
+    evidence: adoption
+  - id: process
+    name: Process
+    question: What will people do differently on every shift, and who is accountable?
+    do:
+      - Build programmes, procedures and SOPs from the people strategy and from real field workflows
+      - RACI with one accountable owner per decision
+      - Management of change for tags, rules and thresholds
+      - Shift handover and review routines that use the trust score
+      - Retire the old report or spreadsheet on a fixed date
+    frameworks: [SOP, RACI, Management of Change, Lean / DMAIC, Shift handover standard]
+    evidence: transformation
+  - id: technology
+    name: Technology
+    question: Which tool fits the goal and the process, and does it run at 3 AM?
+    do:
+      - Select and configure technology against the goal tree and the agreed process
+      - Factory and field acceptance against criteria written with the users
+      - A pipeline that delivers data on purpose, on time and relevant
+      - 24x7 run model with SLA, monitoring, incident management and MTTR
+    frameworks: [ISA-95 levels, Medallion architecture, Data contracts, SLA / ITIL-style operations]
+    evidence: pipeline
+  - id: data
+    name: Data foundation
+    question: Is every decision, about the programme and in the operation, grounded in data we can trust?
+    do:
+      - "Data for decisions: baselines, pain-point evidence and adoption telemetry steer the approach strategy"
+      - "Data from technology: operational data that is fit for purpose, timely, relevant and reconciled"
+      - Quality measured per dimension, every day, with failures quarantined and owned
+    frameworks: [DAMA-DMBOK quality dimensions, Reconciliation against independent sources, Trust score]
+    evidence: quality
+  - id: governance
+    name: Governance
+    question: Who owns each dataset, KPI and decision, and how are conflicts resolved?
+    do:
+      - Data owners and stewards named for every dataset
+      - Business glossary, lineage and system of record per KPI
+      - Data governance council with decision rights and escalation path
+      - Annual maturity assessment with improvement targets
+    frameworks: [DAMA-DMBOK, COBIT 2019, Data maturity assessment]
+    evidence: governance
+  - id: value
+    name: Value realised
+    question: Did operational excellence improve, and does it add up to the strategic result?
+    do:
+      - Value statement per capability, recorded only after it shows in operations
+      - Operational KPIs (uptime, tonnage, safety, cost) linked back to the goal tree
+      - Lessons fed into the next cycle
+    frameworks: [Benefits realisation, Operational excellence KPIs]
+    evidence: transformation
+
+fit_for_purpose:
+  - name: On purpose
+    detail: Every dataset serves a named decision and a KPI with an owner.
+  - name: On time
+    detail: Data lands inside its freshness SLA for the shift that needs it.
+  - name: Relevant
+    detail: Right grain and scope for the decision, with no duplicates or out-of-scope rows.
+  - name: Trusted
+    detail: Validated against rules and reconciled against an independent source.
+
+playbook:
+  - id: N1
+    type: normal
+    pillars: [strategy, people, data]
+    title: Leadership asks for a dashboard next month
+    symptom: A solution is requested before the problem is defined.
+    signal: No baseline KPIs; data quality unknown.
+    root_cause: Technology is being chosen before goals and pain points are understood.
+    resolution:
+      - "Run a two-week discovery: goal tree, pain points per stakeholder layer, baseline data quality"
+      - Show leadership the baseline trust score and what it means for the dashboard they asked for
+      - Agree the first use case and its acceptance criteria, then build
+    example: Kestrel Gas Field started at a trust score near 70. A dashboard on that data would have shown confident but wrong allocation figures.
+  - id: N2
+    type: normal
+    pillars: [people, process]
+    title: Rolling out a new system to shift crews
+    symptom: Four crews on a rotating roster, day and night, with different leaders.
+    signal: Adoption differs by crew and by shift.
+    root_cause: Training and support planned for day shift only.
+    resolution:
+      - Map each crew on power and interest and run ADKAR per group
+      - One champion per crew; train at shift change, including nights
+      - Update the shift handover SOP so the new system is the source used at handover
+    example: Ridgeback Pit dispatchers reached 88% adoption once each crew had its own champion.
+  - id: N3
+    type: normal
+    pillars: [technology, data]
+    title: An instrument reads with a systematic bias
+    symptom: Weighbridge tonnage consistently above on-board payload.
+    signal: WIM vs FMS gap around +4% for weeks, outside the 2% accuracy target.
+    root_cause: Loadcell calibration drift; no daily zero-check.
+    resolution:
+      - Calibrate with certified test weights and issue the certificate
+      - Add a reconciliation rule against an independent source and a daily zero-check SOP
+      - Show the before/after evidence to the people who stopped trusting the number
+    example: The WIM gap fell from about 4% to under 0.5%, and production reporting accepted WIM tonnage.
+  - id: N4
+    type: normal
+    pillars: [technology, governance]
+    title: A data quality rule starts failing overnight
+    symptom: Quarantine rate on one source jumps at 02:00.
+    signal: Rule engine raises a data quality incident.
+    root_cause: An upstream change, such as a patch, tag remap or sensor fault.
+    resolution:
+      - Follow the runbook; confirm the field condition with the control room
+      - Page the named steward and fix at source; never patch downstream
+      - Mark affected KPIs "use with caution" on the shift report until a clean run
+    example: Historian tag quality failures after an OS patch were restored in about 3.5 hours.
+  - id: E1
+    type: edge
+    pillars: [people]
+    title: The data is good but nobody uses it
+    symptom: Trust score above 90, adoption flat.
+    signal: High trust, low adoption quadrant.
+    root_cause: A people gap, usually Desire or Reinforcement. The old way still works, and no one asks for the new one.
+    resolution:
+      - Find the weakest ADKAR element per group
+      - Involve users in defining the KPI they will be measured on
+      - Supervisors use the new view in their reviews; retire the old report on a fixed date
+    example: Field supervisors lagged other groups until the trust score appeared on shift reports.
+  - id: E2
+    type: edge
+    pillars: [data, governance]
+    title: Everyone uses the data, but the data is wrong
+    symptom: High adoption, decisions made confidently on wrong numbers.
+    signal: Low trust, high adoption quadrant. The most dangerous state.
+    root_cause: No visible trust signal on KPIs; quality issues are invisible to users.
+    resolution:
+      - Show a trust badge on every KPI and downgrade it automatically when rules fail
+      - Block regulatory or commercial use of a KPI until it is decision-grade
+      - Communicate the fix and its evidence, so trust is restored rather than lost
+    example: Allocation figures reported to commercial teams while four wells exported pressure in bar.
+  - id: E3
+    type: edge
+    pillars: [process]
+    title: The system is live but the spreadsheets come back
+    symptom: Shadow spreadsheets reappear a month after go-live.
+    signal: Manual entries outside the system; duplicate and late records rise.
+    root_cause: Technology delivered without a procedure, owner or retirement date for the old way.
+    resolution:
+      - Write the SOP with the crews who do the work and assign RACI
+      - Set a date to retire the spreadsheet, then audit
+      - Build the missing step into the form instead of tolerating a workaround
+    example: The daily report moved from a free-text spreadsheet to a validated form with a 10:00 deadline.
+  - id: E4
+    type: edge
+    pillars: [people, governance]
+    title: A powerful stakeholder is quietly against it
+    symptom: Support in meetings, budget or access withheld later.
+    signal: High power, low interest on the stakeholder map.
+    root_cause: The programme is not framed in their terms, such as compliance, cost or risk.
+    resolution:
+      - "Keep satisfied: short briefs on the outcomes they care about"
+      - Involve them in acceptance criteria early
+      - Escalate to the governance council if a decision is blocked
+    example: Hydrocarbon accounting engaged once reconciliation evidence was framed as month-end audit readiness.
+  - id: E5
+    type: edge
+    pillars: [technology, process, data]
+    title: Night shift loses connectivity
+    symptom: Pit radio drops; on-board units buffer and resync hours later.
+    signal: Late and duplicated cycles; night KPIs wrong at the 06:00 handover.
+    root_cause: The pipeline assumes data arrives in order and on time.
+    resolution:
+      - De-duplicate on resync and flag rows past the freshness SLA
+      - Mark night KPIs "provisional" until sync completes
+      - Handover SOP uses the provisional label instead of arguing the number
+    example: The OBU resync duplicate rule (MN-C-05) removed over-counted tonnage after radio dropouts.
+  - id: E6
+    type: edge
+    pillars: [technology, people, governance]
+    title: Fewer false alarms must not mean less safety
+    symptom: Crews ignore fatigue alarms; tuning is proposed.
+    signal: Alert precision near 55%.
+    root_cause: Thresholds and hold times set without validated data.
+    resolution:
+      - Tune from six weeks of control-room-validated alerts (TP/FP)
+      - Acceptance criterion of zero missed validated events over four weeks, with HSE sign-off
+      - Share the evidence with operators to rebuild trust in the alarm
+    example: False alarms fell by about 20% with no loss of true-event coverage, and alarm adoption rose from 75% to 90%.
+  - id: E7
+    type: edge
+    pillars: [technology, process]
+    title: The vendor says it works; the field says it doesn't
+    symptom: Factory test passed, field acceptance failing.
+    signal: Capability stuck at the field acceptance gate.
+    root_cause: Acceptance criteria written without users or real shift conditions.
+    resolution:
+      - Rewrite criteria with the field, including night and wet-weather cases
+      - Test in production conditions and collect evidence
+      - Tie the payment milestone to field acceptance, not installation
+    example: Steward alerting is held at field acceptance until 20 injected failures are routed and closed.
+  - id: E8
+    type: edge
+    pillars: [governance, data]
+    title: Two systems disagree and both have an owner
+    symptom: Weighbridge and FMS give different tonnage; meetings argue the number.
+    signal: Reconciliation rule out of tolerance.
+    root_cause: No system of record defined per KPI.
+    resolution:
+      - Define the system of record for each KPI in the glossary
+      - Keep the other as an independent check through a reconciliation rule
+      - Escalate unresolved conflicts to the data governance council
+    example: WIM became the system of record for reported tonnage, and FMS payload the operational check.
