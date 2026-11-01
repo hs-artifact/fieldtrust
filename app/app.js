@@ -329,7 +329,7 @@ V.overview = () => {
       <h1 class="h1">Field data teams can act on, at any hour</h1>
       <p class="lede">${esc(d.site)}: ${esc(d.description)} Over ${S.data.period.days} days, <b class="num">${fmtInt(t.bronze)}</b> raw records were checked against <b>${t.rules}</b> quality rules before reaching a KPI. Fixing data at source lifted trust, and adoption followed.</p>
       <div class="thesis"><b>field reality</b><i>→</i><b>trusted data</b><i>→</i><b>decisions</b><i>→</i><b>adoption</b></div>
-      <div class="hero-cta"><button type="button" class="btn primary" data-replay="start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>Replay the 90 days</button><a class="btn" href="#framework">See the framework</a></div>
+      <div class="hero-cta"><button type="button" class="btn primary" data-replay="start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>Replay the 90 days</button><a class="btn" href="#value-chain">See the value chain</a><a class="btn" href="#framework">See the framework</a></div>
     </div>
     <div class="hero-gauges">
       <div class="gauge-card" id="g-trust"></div>
@@ -1105,7 +1105,14 @@ function vcStop() {
 const ICON_USER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
 const ICON_SWAP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>`;
 
+function vcLive(st) {
+  const key = st.handoff && st.handoff.live; if (!key) return null;
+  const d = D(), s = d.gold.map(g => g[key]), now = last7(s), was = first7(s), tol = d.reconciliation.tolerance_pct;
+  const cls = now <= tol ? "good" : now <= tol * 2 ? "warn" : "crit";
+  return { key, series: roll7(s), now, was, tol, cls, label: cls === "good" ? "Within tolerance" : cls === "warn" ? "Near tolerance" : "Out of tolerance", rule: d.reconciliation.id };
+}
 function vcCard(st, i, n) {
+  const live = vcLive(st);
   const rows = st.data.map(r => `<tr><td>${esc(r.name)}<span class="src">${esc(r.source)}</span></td>
     <td><span class="vc-type">${vcShape(r.type)}${esc((VC_TYPES[r.type] || [r.type])[0])}</span></td>
     <td class="mono">${esc(r.format)}</td><td>${esc(r.frequency)}</td><td>${esc(r.volume)}</td></tr>`).join("");
@@ -1129,14 +1136,18 @@ function vcCard(st, i, n) {
       <pre class="vc-sample">${esc(String(st.sample.record).trimEnd())}</pre>
       <div class="grid g-2" style="margin-top:18px;gap:18px">
         <div><div class="vc-sub">Where trust breaks</div><ul class="vc-risks">${st.risks.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>
-        <div><div class="vc-sub">Hand-off check</div><div class="vc-hand">${ICON_SWAP}<div>To <b>${esc(st.handoff.to)}</b>: ${esc(st.handoff.check)}. FieldTrust reconciles these two numbers so the next stage can trust what it receives.</div></div></div>
+        <div><div class="vc-sub">Hand-off check</div><div class="vc-hand${live ? " live" : ""}">${ICON_SWAP}<div>To <b>${esc(st.handoff.to)}</b>: ${esc(st.handoff.check)}.
+          ${live ? `<div class="vc-live"><div class="vc-live-row"><span class="vc-live-v num">${fmt(live.now, 2)}%</span>${pill(live.cls, live.label)}</div>
+            <div class="note">7-day gap now, against a ${fmt(live.tol, 0)}% tolerance (rule ${esc(live.rule)}). Week 1 was ${fmt(live.was, 2)}%.</div>
+            ${spark(live.series, "var(--s1)", 220, 36)}<a class="vc-live-link" href="#quality">See it in Data quality →</a></div>`
+          : `<div class="note" style="margin-top:6px">Not modelled in FieldTrust yet. It is on the roadmap as a reconciliation rule.</div>`}</div></div></div>
       </div>
     </div>
   </div>`;
 }
 
 V["value-chain"] = () => {
-  const vc = S.data.valuechain[S.domain], sc = window.FTScenes[S.domain](), stages = vc.stages, n = stages.length;
+  const vc = S.data.valuechain[S.domain], stages = vc.stages, sc = window.FTScenes[S.domain](stages), n = stages.length;
   if (!stages.some(s => s.id === S.sel.vc)) S.sel.vc = stages[0].id;
   const selIdx = stages.findIndex(s => s.id === S.sel.vc);
   let hits = "", pins = "";
@@ -1149,10 +1160,23 @@ V["value-chain"] = () => {
       <text class="pin-t" x="${left ? -24 : 22}" y="4" text-anchor="${left ? "end" : "start"}">${esc(st.name)}</text>
       <circle class="pin-dot" r="13"/><text class="pin-n" y="4">${i + 1}</text></g></g>`;
   });
+  let hands = "";
+  stages.forEach((st, i) => {
+    const hp = sc.stages[st.id].hand; if (!hp || !st.handoff) return;
+    const live = vcLive(st), [hx, hy] = hp, cls = live ? live.cls : "neutral";
+    const tt = `<div class="tt-h">Hand-off · ${esc(st.name)} → ${esc(st.handoff.to)}</div><div style="max-width:260px">${esc(st.handoff.check)}</div>` +
+      (live ? `<div style="margin-top:6px"><b>${fmt(live.now, 2)}%</b> gap now · tolerance ${fmt(live.tol, 0)}% · week 1 ${fmt(live.was, 2)}%</div>` : `<div style="margin-top:6px;color:var(--ink-3)">Not modelled yet</div>`);
+    hands += `<g class="vc-handm ${cls}${live ? " live" : ""}" data-vc="${st.id}" data-tt="${esc(tt)}" transform="translate(${hx},${hy})">
+      ${live ? `<circle r="9" class="hm-ring"><animate attributeName="r" values="7;18" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="2s" repeatCount="indefinite"/></circle>` : ""}
+      <rect x="-6" y="-6" width="12" height="12" rx="2" transform="rotate(45)" class="hm-d"/>
+      ${live ? `<g transform="translate(0,-24)"><rect x="-38" y="-10" width="76" height="20" rx="10" class="hm-bg"/><text y="4" text-anchor="middle" class="hm-t">${fmt(live.now, 2)}% GAP</text></g>` : ""}</g>`;
+  });
   const svg = `<svg id="vcSvg" viewBox="0 0 ${sc.w} ${sc.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Animated cross-section of the ${esc(DOMAINS[S.domain].label)} value chain with data flowing to the data layer">
-    ${sc.svg}${hits}<rect class="vc-hl" id="vcHl" rx="12"/>${pins}</svg>`;
+    ${sc.svg}${hits}<rect class="vc-hl" id="vcHl" rx="12"/>${hands}${pins}</svg>`;
   const steps = stages.map((st, i) => `<button type="button" class="vc-step" data-vc="${st.id}" aria-pressed="false"><b>${i + 1}</b>${esc(st.name)}</button>`).join("");
-  const legend = Object.entries(VC_TYPES).map(([k, [lab]]) => `<span>${vcShape(k)}${esc(lab)}</span>`).join("");
+  const legend = Object.entries(VC_TYPES).map(([k, [lab]]) => `<span>${vcShape(k)}${esc(lab)}</span>`).join("") +
+    `<span><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" rx="1" transform="rotate(45 6 6)" class="lg-hand"/></svg>Hand-off check (live where modelled)</span>` +
+    `<span class="note">Packet rate follows data frequency: 1-second historians flood, yearly models trickle.</span>`;
   const mapRows = stages.map((st, i) => st.data.map((d, k) => {
     const span = st.data.length, first = k === 0;
     return `<tr data-vc="${st.id}" class="${first ? "vc-first" : ""}">${first ? `<td rowspan="${span}"><b>${i + 1}. ${esc(st.name)}</b></td>` : ""}
@@ -1182,8 +1206,12 @@ V["value-chain"] = () => {
     VC.vb = full.slice();
     if (REDUCED() && svgEl.pauseAnimations) svgEl.pauseAnimations();
     const setVB = v => { VC.vb = v; svgEl.setAttribute("viewBox", v.map(x => x.toFixed(1)).join(" ")); scene.classList.toggle("zoomed", v[2] < sc.w - 1); };
+    // on phones the zoomed view uses a taller frame so a stage fills the screen
     const focusOf = id => {
-      const [x, y, w, h] = sc.stages[id].box, w2 = Math.min(sc.w, Math.max(w * 1.45, h * 1.45 * aspect, scene.clientWidth < 640 ? 400 : 540)), h2 = w2 / aspect;
+      const narrow = scene.clientWidth < 640, az = narrow ? 1.35 : aspect, pad = narrow ? 1.2 : 1.45;
+      const [x, y, w, h] = sc.stages[id].box;
+      let w2 = Math.min(sc.w, Math.max(w * pad, h * pad * az, narrow ? 380 : 540)), h2 = w2 / az;
+      if (h2 > sc.h) { h2 = sc.h; w2 = h2 * az; }
       return [clamp(x + w / 2 - w2 / 2, 0, sc.w - w2), clamp(y + h / 2 - h2 / 2, 0, sc.h - h2), w2, h2];
     };
     const tweenTo = target => {

@@ -78,16 +78,22 @@ function packet(type, cls = "") {
   return `<path d="M0 -5 L5 0 L0 5 L-5 0 Z" class="pk pk-geo ${cls}"/>`;
 }
 // packets rise from the asset to the bus and ride it to the hub
-function emitters(stages, types) {
+// Packet rate follows the fastest data stream at each stage, on a log scale:
+// a 1 s historian floods the data layer, a yearly model barely trickles.
+function emitters(stages, vc) {
   let s = "";
   Object.entries(stages).forEach(([id, st], k) => {
-    const [x, y] = st.emit, ts = types[id] || ["event"];
+    const [x, y] = st.emit, items = ((vc.find(v => v.id === id) || {}).data || [{ type: "event", period_s: 3600 }]).slice().sort((a, b) => a.period_s - b.period_s);
     const path = `M${x} ${y} V${BUS} H${HUB_X}`;
-    const len = (y - BUS) + (HUB_X - x), dur = f(len / 120);
-    s += `<g class="sc-emit" data-stage="${id}"><circle cx="${x}" cy="${y}" r="5" class="sc-emit-ring">${anim("r", "4;16", 2.2, `begin="${f(k * .3)}s"`)}${anim("opacity", ".9;0", 2.2, `begin="${f(k * .3)}s"`)}</circle>`;
-    const n = 3;
+    const len = (y - BUS) + (HUB_X - x), travel = len / 120;
+    const gap = .45 + 1.2 * Math.log10(Math.max(1, items[0].period_s));
+    const cycle = Math.max(travel, gap), n = Math.max(1, Math.min(14, Math.round(cycle / gap)));
+    const kt = f(travel / cycle * 1000) / 1000, ring = Math.min(6, Math.max(1.2, gap));
+    s += `<g class="sc-emit" data-stage="${id}"><circle cx="${x}" cy="${y}" r="5" class="sc-emit-ring">${anim("r", "4;16", f(ring), `begin="${f(k * .3)}s"`)}${anim("opacity", ".9;0", f(ring), `begin="${f(k * .3)}s"`)}</circle>`;
     for (let i = 0; i < n; i++) {
-      s += `<g opacity="0">${packet(ts[i % ts.length])}${motion(path, dur, k * .45 + i * dur / n)}${anim("opacity", "0;1;1;0", dur, `begin="${f(k * .45 + i * dur / n)}s" keyTimes="0;.06;.92;1"`)}</g>`;
+      const it = i % 3 === 2 ? items[(Math.floor(i / 3) + 1) % items.length] : items[0];
+      const b = k * .37 + i * cycle / n;
+      s += `<g opacity="0">${packet(it.type)}${motion(path, f(cycle), b, kt < 1 ? `keyPoints="0;1;1" keyTimes="0;${kt};1" calcMode="linear"` : "")}${anim("opacity", "0;1;1;0;0", f(cycle), `begin="${f(b)}s" keyTimes="0;${f(kt * .06 * 1000) / 1000};${f(kt * .94 * 1000) / 1000};${kt};1"`)}</g>`;
     }
     s += `</g>`;
   });
@@ -100,17 +106,16 @@ function tag(x, y, text, anchor = "middle") { return `<text x="${x}" y="${y}" te
 function breakMark(x, y, label) { return `<g class="sc-break"><path d="M${x - 8} ${y + 9} L${x - 2} ${y - 9} M${x + 2} ${y + 9} L${x + 8} ${y - 9}"/>${tag(x, y - 16, label)}</g>`; }
 
 // ============================================================ MINING
-function mining() {
+function mining(vc = []) {
   const id = "mn", G = 380;
   const stages = {
-    pit:      { pin: [190, 300], box: [20, 290, 330, 290], emit: [222, 470] },
-    rom:      { pin: [440, 300], box: [345, 300, 190, 110], emit: [452, 345] },
-    hauling:  { pin: [700, 300], box: [535, 290, 330, 120], emit: [712, 336] },
-    port:     { pin: [960, 300], box: [868, 300, 190, 110], emit: [985, 340] },
-    crushing: { pin: [1162, 250], box: [1060, 240, 190, 170], emit: [1162, 300] },
-    shipment: { pin: [1440, 300], box: [1250, 290, 350, 160], emit: [1350, 368] },
+    pit:      { pin: [190, 300], box: [20, 290, 330, 290], emit: [222, 470], hand: [352, 366] },
+    rom:      { pin: [440, 300], box: [345, 300, 190, 110], emit: [452, 345], hand: [528, 366] },
+    hauling:  { pin: [700, 300], box: [535, 290, 330, 120], emit: [712, 336], hand: [866, 366] },
+    port:     { pin: [960, 300], box: [868, 300, 190, 110], emit: [985, 340], hand: [1062, 322] },
+    crushing: { pin: [1162, 250], box: [1060, 240, 190, 170], emit: [1162, 300], hand: [1252, 286] },
+    shipment: { pin: [1440, 300], box: [1250, 290, 350, 160], emit: [1350, 368], hand: [1590, 352] },
   };
-  const types = { pit: ["event", "geospatial", "event"], rom: ["event", "document", "geospatial"], hauling: ["event", "event", "geospatial"], port: ["event", "document", "geospatial"], crushing: ["time-series", "time-series", "event"], shipment: ["time-series", "document", "document"] };
   const hills = ["M0 300 Q120 230 260 270 T560 250 T900 262 T1250 238 T1600 262 V382 H0 Z", "M0 336 Q160 296 330 322 T700 312 T1050 318 T1300 300 V382 H0 Z"];
 
   // pit geometry: benches stepping down to the coal seam
@@ -184,7 +189,7 @@ function mining() {
      <text x="-4" y="6" text-anchor="middle" class="sc-tag-ink">MV CORAL WREN</text></g>`;
   s += `<g transform="translate(1468,412)"><rect x="-16" y="-6" width="32" height="10" class="sc-barge"/><path d="M-6 -6 L4 -40 L22 -30" class="sc-crane" fill="none"/></g>`;
   s += tag(1430, 470, "ANCHORAGE · TRANS-SHIPMENT");
-  s += bus() + emitters(stages, types);
+  s += bus() + emitters(stages, vc);
   return { w: W, h: 600, svg: s, stages };
 }
 
@@ -196,20 +201,19 @@ function waves(x0, x1, y) {
 }
 
 // ============================================================ OIL & GAS
-function oilGas() {
+function oilGas(vc = []) {
   const id = "og", G = 330;
   const stages = {
-    reservoir:       { pin: [470, 610], box: [60, 470, 520, 200], emit: [300, 560] },
-    well:            { pin: [392, 255], box: [320, 250, 120, 330], emit: [360, 312] },
-    "drilling-pipe": { pin: [104, 470], box: [60, 320, 250, 250], emit: [176, 420] },
-    rig:             { pin: [96, 150], box: [70, 130, 210, 205], emit: [176, 184] },
-    processing:      { pin: [720, 168], box: [580, 160, 290, 180], emit: [700, 240] },
-    gts:             { pin: [1000, 250], box: [870, 240, 260, 130], emit: [1000, 300] },
-    terminal:        { pin: [1200, 222], box: [1120, 214, 170, 130], emit: [1200, 268] },
-    export:          { pin: [1336, 228], box: [1290, 222, 110, 125], emit: [1336, 290] },
-    vessel:          { pin: [1505, 280], box: [1400, 270, 200, 150], emit: [1505, 344] },
+    reservoir:       { pin: [470, 610], box: [60, 470, 520, 200], emit: [300, 560], hand: [322, 536] },
+    well:            { pin: [392, 255], box: [320, 250, 120, 330], emit: [360, 312], hand: [452, 298] },
+    "drilling-pipe": { pin: [104, 470], box: [60, 320, 250, 250], emit: [176, 420], hand: [150, 300] },
+    rig:             { pin: [96, 150], box: [70, 130, 210, 205], emit: [176, 184], hand: [262, 318] },
+    processing:      { pin: [720, 168], box: [580, 160, 290, 180], emit: [700, 240], hand: [862, 282] },
+    gts:             { pin: [1000, 250], box: [870, 240, 260, 130], emit: [1000, 300], hand: [1128, 286] },
+    terminal:        { pin: [1196, 194], box: [1120, 214, 170, 130], emit: [1200, 268], hand: [1290, 286] },
+    export:          { pin: [1336, 228], box: [1290, 222, 110, 125], emit: [1336, 290], hand: [1404, 316] },
+    vessel:          { pin: [1505, 280], box: [1400, 270, 200, 150], emit: [1505, 344], hand: [1590, 330] },
   };
-  const types = { reservoir: ["geospatial", "geospatial", "time-series"], well: ["time-series", "event", "document"], "drilling-pipe": ["time-series", "geospatial", "time-series"], rig: ["time-series", "document", "event"], processing: ["time-series", "event", "time-series"], gts: ["time-series", "event", "document"], terminal: ["time-series", "document", "event"], export: ["time-series", "document", "event"], vessel: ["document", "geospatial", "event"] };
   const hills = ["M0 250 Q140 200 300 236 T640 224 T980 238 T1300 214 T1600 236 V332 H0 Z", "M0 290 Q180 258 380 280 T760 270 T1100 276 T1380 262 V332 H0 Z"];
   let s = defs(id) + sky(id, G, hills);
 
@@ -278,15 +282,20 @@ function oilGas() {
   [900, 1070, 1110].forEach(x => { s += `<rect x="${x - 1.5}" y="316" width="3" height="14" class="sc-marker"/><rect x="${x - 4}" y="312" width="8" height="5" class="sc-marker-top"/>`; });
   s += `<g transform="translate(1090,330)"><rect x="-12" y="-12" width="24" height="10" rx="5" class="sc-steel"/><text y="-18" text-anchor="middle" class="sc-tag">PIG TRAP</text></g>`;
 
-  // terminal tanks
+  // terminal: liquefaction train, LNG full-containment tank, condensate tank
   s += `<rect x="1120" y="324" width="260" height="8" class="sc-concrete"/>`;
-  [[1150, 34], [1200, 40], [1252, 34]].forEach(([x, w]) => { s += `<g><rect x="${x - w / 2}" y="${330 - 56}" width="${w}" height="56" class="sc-tank"/><ellipse cx="${x}" cy="${330 - 56}" rx="${w / 2}" ry="5" class="sc-tank-top"/><rect x="${x - w / 2}" y="${330 - 30}" width="${w}" height="3" class="sc-tank-band"/></g>`; });
-  s += `<path d="M1130 300 H1278" class="sc-pipe-thin"/>${flowDash("M1130 300 H1278", "sc-gas-flow", .9, "3 7")}${light(id, 1200, 262, 12)}` + tag(1200, 346, "TERMINAL STORAGE");
+  s += `<g><rect x="1136" y="246" width="20" height="78" class="sc-coldbox"/><rect x="1136" y="246" width="20" height="5" class="sc-tank-band"/>
+    <rect x="1160" y="276" width="30" height="48" class="sc-steel-2"/>${[0, 1, 2].map(k => `<rect x="${1162 + k * 9}" y="270" width="7" height="6" class="sc-fan"/>`).join("")}
+    ${[0, 1, 2].map(k => `<circle cx="${1165.5 + k * 9}" cy="268" r="3" class="sc-fan-blade"><animateTransform attributeName="transform" type="rotate" from="0 ${1165.5 + k * 9} 268" to="360 ${1165.5 + k * 9} 268" dur="${.8 + k * .15}s" repeatCount="indefinite"/></circle>`).join("")}
+    <path d="M1146 246 V236" class="sc-pipe-thin"/>${light(id, 1146, 234, 10)}</g>`;
+  s += `<g><rect x="1196" y="282" width="56" height="42" class="sc-tank"/><path d="M1196 282 Q1224 262 1252 282 Z" class="sc-tank-top"/><rect x="1196" y="300" width="56" height="3" class="sc-tank-band"/><text x="1224" y="318" text-anchor="middle" class="sc-tag-dark">LNG</text></g>`;
+  s += `<g><rect x="1260" y="292" width="22" height="32" class="sc-tank"/><ellipse cx="1271" cy="292" rx="11" ry="3.5" class="sc-tank-top"/></g>`;
+  s += `<path d="M1130 300 H1136 M1156 300 H1160 M1190 300 H1196" class="sc-pipe-thin"/>${flowDash("M1130 300 H1136 M1156 300 H1160 M1190 300 H1196", "sc-lng-flow", .9, "3 5")}${light(id, 1224, 262, 12)}` + tag(1200, 346, "LIQUEFACTION · LNG STORAGE");
 
   // export metering station + jetty
   s += `<g transform="translate(1336,330)"><rect x="-30" y="-34" width="60" height="34" class="sc-plant"/><rect x="-30" y="-34" width="60" height="7" class="sc-fiscal"/><text y="-28.5" text-anchor="middle" class="sc-sign-t">FISCAL METER</text>
     ${[-18, -4, 10].map(x => `<rect x="${x}" y="-20" width="9" height="14" rx="2" class="sc-meter"/>`).join("")}<circle cx="23" cy="-14" r="3" class="sc-valve"/>${light(id, 0, -40, 12)}</g>`;
-  s += `<path d="M1278 300 H1300 M1366 312 H1430" class="sc-pipe-thin"/>${flowDash("M1366 312 H1430", "sc-gas-flow", .7, "3 6")}`;
+  s += `<path d="M1282 304 H1306 M1366 312 H1430" class="sc-pipe-thin"/>${flowDash("M1366 312 H1430", "sc-lng-flow", .7, "3 6")}`;
   // sea, jetty, LNG carrier
   s += `<rect x="1380" y="340" width="220" height="360" fill="url(#${id}-sea)"/>` + waves(1380, 1600, 348);
   s += `<rect x="1370" y="330" width="80" height="6" class="sc-concrete"/>${[1390, 1420, 1446].map(x => `<rect x="${x}" y="336" width="3" height="40" class="sc-leg"/>`).join("")}`;
@@ -296,7 +305,7 @@ function oilGas() {
     ${[-48, -18, 12, 42].map(x => `<path d="M${x - 13} -16 A13 13 0 0 1 ${x + 13} -16 Z" class="sc-dome"/>`).join("")}
     <rect x="56" y="-40" width="16" height="24" class="sc-bridge"/><rect x="59" y="-36" width="10" height="4" class="sc-win"/>${light(id, 64, -42, 10)}
     <text x="0" y="8" text-anchor="middle" class="sc-tag-ink">LNG · MT HARBOUR KITE</text></g></g>`;
-  s += bus() + emitters(stages, types);
+  s += bus() + emitters(stages, vc);
   return { w: W, h: H, svg: s, stages };
 }
 

@@ -717,7 +717,7 @@ table.vc-data .src { display: block; font-weight: 400; color: var(--ink-3); font
 .vc-risks li { font-size: 12.5px; color: var(--ink-2); padding-left: 18px; position: relative; }
 .vc-risks li::before { content: "!"; position: absolute; left: 0; top: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--warn-soft); color: var(--warn); font: 700 9px/12px var(--f-mono); text-align: center; }
 .vc-hand { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; font-size: 12.5px; color: var(--ink-2); }
-.vc-hand svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--accent); }
+.vc-hand > svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--accent); }
 .vc-hand b { color: var(--ink); }
 .vc-card-enter { animation: rise .35s ease-out both; }
 table.vc-map { min-width: 980px; }
@@ -744,3 +744,29 @@ table.vc-map .vc-type { white-space: normal; color: var(--ink); }
   .vc-scene:not(.zoomed) .pin-core { transform: scale(2.3); }
 }
 table.vc-map tbody tr:last-child td, table.vc-map tr:has(+ tr.vc-first) td, table.vc-map td[rowspan] { padding-bottom: 12px; }
+.sc-coldbox { fill: #dfe4e6; stroke: rgba(0,0,0,.25); }
+.sc-fan { fill: var(--sc-steel); } .sc-fan-blade { fill: none; stroke: #2a3236; stroke-width: 1.2; stroke-dasharray: 2 2.7; }
+.sc-lng-flow { stroke: #7cc6ff; stroke-width: 2; stroke-linecap: round; }
+.sc-tag-dark { font: 700 8px var(--f-mono); letter-spacing: .12em; fill: #3a4449; }
+/* hand-off markers */
+.vc-handm { cursor: pointer; }
+.vc-handm .hm-d { fill: var(--surface); stroke: var(--ink-3); stroke-width: 2; }
+.vc-handm.neutral .hm-d { stroke-dasharray: 3 2; }
+.vc-handm.good .hm-d { fill: var(--good); stroke: var(--surface); }
+.vc-handm.warn .hm-d { fill: var(--warn); stroke: var(--surface); }
+.vc-handm.crit .hm-d { fill: var(--crit); stroke: var(--surface); }
+.vc-handm .hm-ring { fill: none; stroke-width: 2; }
+.vc-handm.good .hm-ring { stroke: var(--good); } .vc-handm.warn .hm-ring { stroke: var(--warn); } .vc-handm.crit .hm-ring { stroke: var(--crit); }
+.vc-handm .hm-bg { fill: var(--surface); stroke: var(--line); }
+.vc-handm.good .hm-bg { stroke: var(--good); } .vc-handm.warn .hm-bg { stroke: var(--warn); } .vc-handm.crit .hm-bg { stroke: var(--crit); }
+.vc-handm .hm-t { font: 700 10px var(--f-mono); fill: var(--ink); letter-spacing: .04em; pointer-events: none; }
+.vc-handm:hover .hm-d { transform: rotate(45deg) scale(1.3); }
+.lg-hand { fill: var(--good); }
+.vc-hand.live { border-style: solid; border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.vc-live { margin-top: 10px; display: grid; gap: 6px; }
+.vc-live-row { display: flex; align-items: center; gap: 10px; }
+.vc-live-v { font: 600 26px/1 var(--f-display); color: var(--ink); }
+.vc-live-link { font-size: 12.5px; color: var(--accent); text-decoration: none; }
+.vc-live-link:hover { text-decoration: underline; }
+@media (max-width: 640px) { .vc-scene:not(.zoomed) .vc-handm .hm-bg, .vc-scene:not(.zoomed) .vc-handm .hm-t { display: none; } }
+.vc-handm .hm-ring { pointer-events: none; }
