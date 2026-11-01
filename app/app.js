@@ -46,6 +46,7 @@ const DOMAINS = {
 };
 const VIEWS = [
   { id: "overview", label: "Overview", group: "Story", icon: "M3 12l9-8 9 8M5 10v10h14V10" },
+  { id: "value-chain", label: "Value chain", group: "Story", icon: "M2 18h4l3-5h5l3 5h5M6 18V9l3-3M17 18v-6h3M12 13V6" },
   { id: "framework", label: "Framework", group: "Story", icon: "M4 4h16v4H4zM5 10h3v8H5zM10.5 10h3v8h-3zM16 10h3v8h-3zM4 20h16" },
   { id: "case-study", label: "Case study", group: "Story", icon: "M5 4h10l4 4v12H5zM14 4v5h5M8 13h8M8 17h6" },
   { id: "pipeline", label: "Data engineering", group: "Data", icon: "M4 6h6v4H4zM14 14h6v4h-6zM10 8h4v8M4 16h6" },
@@ -1085,6 +1086,163 @@ V.playbook = () => {
   return [html, after];
 };
 
+// ---------------------------------------------------------------- value chain
+const VC = { timer: 0, raf: 0, tween: 0, vb: null, tour: false };
+const VC_TYPES = { "time-series": ["Time-series", "lg-ts"], event: ["Event / transaction", "lg-ev"], document: ["Document / report", "lg-doc"], geospatial: ["Geospatial / model", "lg-geo"] };
+const VC_STEP_MS = 7000;
+function vcShape(type) {
+  const c = (VC_TYPES[type] || VC_TYPES.event)[1];
+  const p = type === "time-series" ? `<circle cx="6" cy="6" r="5" class="${c}"/>`
+    : type === "document" ? `<path d="M2 1H8L10.5 3.5V11H2Z" class="${c}"/>`
+    : type === "geospatial" ? `<path d="M6 .5L11.5 6 6 11.5.5 6Z" class="${c}"/>`
+    : `<rect x="1.2" y="1.2" width="9.6" height="9.6" rx="1.2" class="${c}"/>`;
+  return `<svg viewBox="0 0 12 12" aria-hidden="true">${p}</svg>`;
+}
+function vcStop() {
+  clearInterval(VC.timer); cancelAnimationFrame(VC.raf); cancelAnimationFrame(VC.tween);
+  VC.timer = VC.raf = VC.tween = 0; VC.tour = false;
+}
+const ICON_USER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
+const ICON_SWAP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>`;
+
+function vcCard(st, i, n) {
+  const rows = st.data.map(r => `<tr><td>${esc(r.name)}<span class="src">${esc(r.source)}</span></td>
+    <td><span class="vc-type">${vcShape(r.type)}${esc((VC_TYPES[r.type] || [r.type])[0])}</span></td>
+    <td class="mono">${esc(r.format)}</td><td>${esc(r.frequency)}</td><td>${esc(r.volume)}</td></tr>`).join("");
+  const ft = (st.fieldtrust || []).map(ds => `<a class="chip accent" href="#pipeline" title="Open in Data engineering">${esc(ds)}</a>`).join(" ");
+  return `<div class="vc-card vc-card-enter">
+    <div>
+      <div class="eyebrow">Stage ${i + 1} of ${n}</div>
+      <h3>${esc(st.name)}</h3>
+      <p class="what">${esc(st.what)}</p>
+      <div class="vc-sub">Assets on site</div><p class="note" style="margin:0;color:var(--ink-2)">${esc(st.assets)}</p>
+      <div class="vc-sub">Who consumes this data</div>
+      <div class="vc-cons">${st.consumers.map(c => `<div class="vc-con">${ICON_USER}<b>${esc(c.role)}</b><span>${esc(c.uses)}</span></div>`).join("")}</div>
+      <div class="vc-sub">Business function</div><div class="vc-fn">${esc(st.function)}</div>
+      <div class="vc-sub">KPIs fed by this data</div><div class="vc-kpis">${st.kpis.map(k => `<span class="chip">${esc(k)}</span>`).join("")}</div>
+    </div>
+    <div>
+      <div class="vc-sub">Data produced here</div>
+      <div class="tbl-wrap"><table class="vc-data"><thead><tr><th>Data</th><th>Type</th><th>Format</th><th>Frequency</th><th>Volume</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="vc-sub">Sample record</div>
+      <div class="vc-sample-h"><span>${esc(st.sample.system)}</span><span>${ft}</span></div>
+      <pre class="vc-sample">${esc(String(st.sample.record).trimEnd())}</pre>
+      <div class="grid g-2" style="margin-top:18px;gap:18px">
+        <div><div class="vc-sub">Where trust breaks</div><ul class="vc-risks">${st.risks.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>
+        <div><div class="vc-sub">Hand-off check</div><div class="vc-hand">${ICON_SWAP}<div>To <b>${esc(st.handoff.to)}</b>: ${esc(st.handoff.check)}. FieldTrust reconciles these two numbers so the next stage can trust what it receives.</div></div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+V["value-chain"] = () => {
+  const vc = S.data.valuechain[S.domain], sc = window.FTScenes[S.domain](), stages = vc.stages, n = stages.length;
+  if (!stages.some(s => s.id === S.sel.vc)) S.sel.vc = stages[0].id;
+  const selIdx = stages.findIndex(s => s.id === S.sel.vc);
+  let hits = "", pins = "";
+  stages.forEach((st, i) => {
+    const g = sc.stages[st.id], [bx, by, bw, bh] = g.box, [px, py] = g.pin;
+    hits += `<rect class="vc-hit" data-vc="${st.id}" x="${bx}" y="${by}" width="${bw}" height="${bh}"/>`;
+    const tw = st.name.length * 6.9 + 18, left = px + tw + 30 > sc.w;
+    pins += `<g class="vc-pin" data-vc="${st.id}" tabindex="0" role="button" aria-label="Stage ${i + 1}: ${esc(st.name)}" transform="translate(${px},${py})"><g class="pin-core">
+      <rect class="pin-bg" x="${left ? -tw - 18 : 8}" y="-11" width="${tw + 10}" height="22" rx="11"/>
+      <text class="pin-t" x="${left ? -24 : 22}" y="4" text-anchor="${left ? "end" : "start"}">${esc(st.name)}</text>
+      <circle class="pin-dot" r="13"/><text class="pin-n" y="4">${i + 1}</text></g></g>`;
+  });
+  const svg = `<svg id="vcSvg" viewBox="0 0 ${sc.w} ${sc.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Animated cross-section of the ${esc(DOMAINS[S.domain].label)} value chain with data flowing to the data layer">
+    ${sc.svg}${hits}<rect class="vc-hl" id="vcHl" rx="12"/>${pins}</svg>`;
+  const steps = stages.map((st, i) => `<button type="button" class="vc-step" data-vc="${st.id}" aria-pressed="false"><b>${i + 1}</b>${esc(st.name)}</button>`).join("");
+  const legend = Object.entries(VC_TYPES).map(([k, [lab]]) => `<span>${vcShape(k)}${esc(lab)}</span>`).join("");
+  const mapRows = stages.map((st, i) => st.data.map((d, k) => {
+    const span = st.data.length, first = k === 0;
+    return `<tr data-vc="${st.id}" class="${first ? "vc-first" : ""}">${first ? `<td rowspan="${span}"><b>${i + 1}. ${esc(st.name)}</b></td>` : ""}
+      <td><span class="vc-type">${vcShape(d.type)}${esc(d.name)}</span></td><td class="mono">${esc(d.format)}</td><td>${esc(d.frequency)}</td>
+      ${first ? `<td rowspan="${span}">${st.consumers.map(c => esc(c.role)).join("<br>")}</td><td rowspan="${span}">${esc(st.function.split(". ")[0])}.</td>` : ""}</tr>`;
+  }).join("")).join("");
+  const html = `<section class="grid" style="gap:22px">
+  ${header(`Value chain · ${DOMAINS[S.domain].label} pack`, vc.title, esc(vc.lede))}
+  <section class="panel flush">
+    ${panelHead("Physical flow, mapped to data", "Click a numbered stage or play the tour. Each asset sends its data up to the data layer; shape and colour show the type of data.",
+      `<div class="vc-ctrl"><button class="btn primary" type="button" id="vcTour" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg><span>Play the tour</span></button><button class="btn" type="button" id="vcAll">Whole chain</button></div>`)}
+    <div class="vc-scene has-sel" id="vcScene">${svg}</div>
+    <div class="vc-steps" id="vcSteps">${steps}</div>
+    <div class="vc-foot"><div class="vc-legend">${legend}</div><div class="vc-prog" aria-hidden="true"><i id="vcProg"></i></div></div>
+  </section>
+  <section class="panel" id="vcCard" aria-live="polite">${vcCard(stages[selIdx], selIdx, n)}</section>
+  <section class="panel">${panelHead("Data map", "The whole chain on one page: what each stage produces, in what format, how often, and who uses it. Click a row to jump to that stage.")}
+    <div class="tbl-wrap"><table class="vc-map"><thead><tr><th>Stage</th><th>Data produced (shape = type)</th><th>Format</th><th>Frequency</th><th>Consumers</th><th>Business function</th></tr></thead><tbody>${mapRows}</tbody></table></div>
+  </section>
+  </section>`;
+
+  const after = () => {
+    const scene = $("#vcScene"), svgEl = $("#vcSvg");
+    if (!scene || scene.dataset.bound) return;
+    scene.dataset.bound = "1";
+    const full = [0, 0, sc.w, sc.h], aspect = sc.w / sc.h;
+    VC.vb = full.slice();
+    if (REDUCED() && svgEl.pauseAnimations) svgEl.pauseAnimations();
+    const setVB = v => { VC.vb = v; svgEl.setAttribute("viewBox", v.map(x => x.toFixed(1)).join(" ")); scene.classList.toggle("zoomed", v[2] < sc.w - 1); };
+    const focusOf = id => {
+      const [x, y, w, h] = sc.stages[id].box, w2 = Math.min(sc.w, Math.max(w * 1.45, h * 1.45 * aspect, scene.clientWidth < 640 ? 400 : 540)), h2 = w2 / aspect;
+      return [clamp(x + w / 2 - w2 / 2, 0, sc.w - w2), clamp(y + h / 2 - h2 / 2, 0, sc.h - h2), w2, h2];
+    };
+    const tweenTo = target => {
+      cancelAnimationFrame(VC.tween);
+      if (REDUCED()) { setVB(target); return; }
+      const from = VC.vb.slice(), t0 = performance.now(), dur = 1000;
+      const step = now => {
+        const p = Math.min(1, (now - t0) / dur), e = p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        setVB(from.map((v, k) => v + (target[k] - v) * e));
+        if (p < 1) VC.tween = requestAnimationFrame(step);
+      };
+      VC.tween = requestAnimationFrame(step);
+    };
+    const select = (id, zoom) => {
+      const i = stages.findIndex(s => s.id === id); if (i < 0) return;
+      const changed = S.sel.vc !== id || !$("#vcHl").classList.contains("on");
+      S.sel.vc = id;
+      $$(".vc-pin", scene).forEach(p => p.classList.toggle("on", p.dataset.vc === id));
+      $$(".sc-emit", scene).forEach(p => p.classList.toggle("on", p.dataset.stage === id));
+      $$("#vcSteps .vc-step").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vc === id)));
+      $$("table.vc-map tr[data-vc]").forEach(r => r.classList.toggle("on", r.dataset.vc === id));
+      const [x, y, w, h] = sc.stages[id].box, hl = $("#vcHl");
+      hl.setAttribute("x", x); hl.setAttribute("y", y); hl.setAttribute("width", w); hl.setAttribute("height", h); hl.classList.add("on");
+      const stepBtn = $(`#vcSteps .vc-step[data-vc="${id}"]`); if (stepBtn) stepBtn.scrollIntoView({ block: "nearest", inline: "center", behavior: REDUCED() ? "auto" : "smooth" });
+      if (changed) $("#vcCard").innerHTML = vcCard(stages[i], i, n);
+      if (zoom) tweenTo(focusOf(id));
+    };
+    const stopTour = () => {
+      clearInterval(VC.timer); cancelAnimationFrame(VC.raf); VC.timer = VC.raf = 0; VC.tour = false;
+      const b = $("#vcTour"); if (b) { b.setAttribute("aria-pressed", "false"); $("span", b).textContent = "Play the tour"; }
+      const pg = $("#vcProg"); if (pg) pg.style.width = "0";
+    };
+    const startTour = () => {
+      VC.tour = true;
+      const b = $("#vcTour"); b.setAttribute("aria-pressed", "true"); $("span", b).textContent = "Pause the tour";
+      let i = Math.max(0, stages.findIndex(s => s.id === S.sel.vc));
+      if (!scene.classList.contains("zoomed")) i = 0;
+      let t0 = performance.now();
+      select(stages[i].id, true);
+      const tick = now => { const pg = $("#vcProg"); if (!pg) return; pg.style.width = `${Math.min(100, ((i + (now - t0) / VC_STEP_MS) / n) * 100)}%`; VC.raf = requestAnimationFrame(tick); };
+      VC.raf = requestAnimationFrame(tick);
+      VC.timer = setInterval(() => {
+        i += 1; t0 = performance.now();
+        if (i >= n) { stopTour(); tweenTo(full); return; }
+        select(stages[i].id, true);
+      }, VC_STEP_MS);
+    };
+    const userPick = (id, zoom = true) => { if (VC.tour) stopTour(); select(id, zoom); };
+    scene.addEventListener("click", e => { const t = e.target.closest("[data-vc]"); if (t) userPick(t.dataset.vc); });
+    scene.addEventListener("keydown", e => { const t = e.target.closest(".vc-pin"); if (t && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); userPick(t.dataset.vc); } });
+    $("#vcSteps").addEventListener("click", e => { const t = e.target.closest("[data-vc]"); if (t) userPick(t.dataset.vc); });
+    $("table.vc-map").addEventListener("click", e => { const t = e.target.closest("tr[data-vc]"); if (!t) return; userPick(t.dataset.vc); scene.scrollIntoView({ behavior: REDUCED() ? "auto" : "smooth", block: "center" }); });
+    $("#vcAll").addEventListener("click", () => { if (VC.tour) stopTour(); tweenTo(full); });
+    $("#vcTour").addEventListener("click", () => { if (VC.tour) stopTour(); else startTour(); });
+    select(S.sel.vc, false);
+  };
+  return [html, after];
+};
+
 // ---------------------------------------------------------------- shell
 function renderNav() {
   let html = "", g = "";
@@ -1104,7 +1262,7 @@ function renderTop() {
 }
 let afterFn = null;
 function render(animate = true) {
-  hideTT(); stopFlow(); if (REPLAY.timer) { clearInterval(REPLAY.timer); REPLAY.timer = null; }
+  hideTT(); stopFlow(); vcStop(); if (REPLAY.timer) { clearInterval(REPLAY.timer); REPLAY.timer = null; }
   renderNav(); renderTop();
   const [html, after] = (V[S.view] || V.overview)();
   const view = $("#view");
