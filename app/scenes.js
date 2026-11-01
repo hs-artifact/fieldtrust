@@ -120,8 +120,9 @@ function mining(vc = []) {
 
   // pit geometry: benches stepping down to the coal seam
   const pitPath = "M24 380 H44 L56 408 H84 L96 436 H124 L136 464 H160 L172 494 H262 L274 466 H292 L304 438 H318 L330 410 H340 L352 380";
-  const ramp = "M222 494 L274 466 H292 L304 438 H318 L330 410 H340 L352 380 L470 380";
-  const rampBack = "M470 380 L352 380 L340 410 H330 L318 438 H304 L292 466 H274 L236 494";
+  // in-pit ring road: the ramp spirals round the pit wall at a gentle grade,
+  // seen here as switchback legs on the far wall, then runs out to the ROM pad
+  const ring = "M204 494 L258 479 Q278 473 264 466 L146 450 Q126 447 140 440 L300 424 Q324 420 306 412 L90 400 Q64 397 80 390 L352 380 L456 380";
   const haulRoad = "M520 380 H868";
   let s = defs(id) + sky(id, G, hills);
   // ground and strata
@@ -142,17 +143,17 @@ function mining(vc = []) {
   s += `<g transform="translate(70,408)"><rect x="-10" y="-7" width="22" height="7" rx="2" fill="#5a6064"/><rect x="-6" y="-14" width="12" height="7" fill="#d99a1e"/><rect x="0" y="-42" width="3" height="30" fill="#c9cfd1"/>${light(id, 1.5, -44, 10)}</g>`;
   s += [100, 110, 120].map(x => `<circle cx="${x}" cy="434" r="1.6" class="sc-blast"/>`).join("");
   // excavator loading at the seam
-  s += `<g transform="translate(196,494)"><rect x="-18" y="-8" width="34" height="8" rx="4" fill="#2b2b2b"/><rect x="-14" y="-22" width="26" height="14" rx="2" fill="#d99a1e"/><rect x="4" y="-30" width="8" height="8" fill="#e9b13a"/>
+  s += `<g transform="translate(170,494)"><rect x="-18" y="-8" width="34" height="8" rx="4" fill="#2b2b2b"/><rect x="-14" y="-22" width="26" height="14" rx="2" fill="#d99a1e"/><rect x="4" y="-30" width="8" height="8" fill="#e9b13a"/>
     <g>${`<animateTransform attributeName="transform" type="rotate" values="0 8 -20;-14 8 -20;0 8 -20" dur="5s" repeatCount="indefinite"/>`}<path d="M8 -20 L34 -44 L46 -22" fill="none" stroke="#c78a17" stroke-width="5" stroke-linecap="round"/><path d="M42 -24 L52 -18 L46 -10 L38 -16 Z" fill="#555"/></g>${light(id, 10, -32, 12)}</g>`;
-  s += `<use href="#${id}-haul" transform="translate(240,494) scale(-1,1)"/>`;
   // ROM stockpiles + loader
   s += `<path d="M360 380 Q392 330 428 380 Z" class="sc-pile"/><path d="M420 380 Q456 322 496 380 Z" class="sc-pile"/><path d="M486 380 Q506 352 526 380 Z" class="sc-pile"/>`;
   s += `<g transform="translate(508,380)"><rect x="-10" y="-9" width="18" height="7" rx="2" fill="#d99a1e"/><circle cx="-6" cy="-3" r="3.2" fill="#222"/><circle cx="5" cy="-3" r="3.2" fill="#222"/><rect x="-14" y="-12" width="5" height="6" fill="#777"/></g>`;
   s += light(id, 440, 300, 16) + `<rect x="439" y="302" width="2" height="78" class="sc-pole"/>`;
   s += tag(440, 398, "ROM PAD");
-  // haul trucks: loaded up the ramp, empty back down
-  [0, 6.5, 13].forEach(b => { s += `<g><use href="#${id}-haul-load"/>${motion(ramp, 19.5, b, 'rotate="auto"')}</g>`; });
-  [3, 9.5, 16].forEach(b => { s += `<g><use href="#${id}-haul" transform="scale(-1,1)"/>${motion(rampBack, 19.5, b, 'rotate="auto-reverse"')}</g>`; });
+  // haul trucks follow the ring road (driven by the app so they stay upright both ways)
+  s += `<path d="${ring}" class="sc-ramp-berm" fill="none"/><path id="${id}-ring" d="${ring}" class="sc-ramp" fill="none"/><path d="${ring}" class="sc-ramp-mark" fill="none" stroke-dasharray="6 10"/>`;
+  [0, 1 / 3, 2 / 3].forEach(o => { s += `<g class="sc-mover" data-path="${id}-ring" data-dur="27" data-offset="${f(o + 1 / 6)}" data-rev="1" data-lane="-2" data-scale=".68"><use href="#${id}-haul"/></g>`; });
+  [0, 1 / 3, 2 / 3].forEach(o => { s += `<g class="sc-mover" data-path="${id}-ring" data-dur="27" data-offset="${f(o)}" data-rev="0" data-lane="0" data-scale=".68"><use href="#${id}-haul-load"/></g>`; });
 
   // haul road with WIM bridge and fatigue camera
   s += `<rect x="520" y="378" width="348" height="5" class="sc-road"/>${flowDash("M520 380.5 H868", "sc-road-mark", 3, "10 14")}`;

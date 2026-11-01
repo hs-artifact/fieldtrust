@@ -1087,7 +1087,7 @@ V.playbook = () => {
 };
 
 // ---------------------------------------------------------------- value chain
-const VC = { timer: 0, raf: 0, tween: 0, vb: null, tour: false };
+const VC = { timer: 0, raf: 0, tween: 0, mov: 0, vb: null, tour: false };
 const VC_TYPES = { "time-series": ["Time-series", "lg-ts"], event: ["Event / transaction", "lg-ev"], document: ["Document / report", "lg-doc"], geospatial: ["Geospatial / model", "lg-geo"] };
 const VC_STEP_MS = 7000;
 function vcShape(type) {
@@ -1099,7 +1099,7 @@ function vcShape(type) {
   return `<svg viewBox="0 0 12 12" aria-hidden="true">${p}</svg>`;
 }
 function vcStop() {
-  clearInterval(VC.timer); cancelAnimationFrame(VC.raf); cancelAnimationFrame(VC.tween);
+  clearInterval(VC.timer); cancelAnimationFrame(VC.raf); cancelAnimationFrame(VC.tween); cancelAnimationFrame(VC.mov);
   VC.timer = VC.raf = VC.tween = 0; VC.tour = false;
 }
 const ICON_USER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
@@ -1205,6 +1205,32 @@ V["value-chain"] = () => {
     const full = [0, 0, sc.w, sc.h], aspect = sc.w / sc.h;
     VC.vb = full.slice();
     if (REDUCED() && svgEl.pauseAnimations) svgEl.pauseAnimations();
+    // vehicles on winding roads: placed along the path each frame, kept upright and
+    // facing the way they travel (SMIL's auto-rotate would flip them upside down)
+    const movers = $$(".sc-mover", svgEl).map(g => {
+      const path = svgEl.querySelector("#" + g.dataset.path);
+      return path && { g, path, L: path.getTotalLength(), dur: +g.dataset.dur, off: +g.dataset.offset, rev: g.dataset.rev === "1", lane: +g.dataset.lane || 0, scale: +g.dataset.scale || 1, dir: 1 };
+    }).filter(Boolean);
+    const place = now => {
+      movers.forEach(m => {
+        const t = ((now / 1000) / m.dur + m.off) % 1, s = (m.rev ? 1 - t : t) * m.L, step = m.rev ? -2 : 2;
+        const p = m.path.getPointAtLength(s), q = m.path.getPointAtLength(clamp(s + step, 0, m.L));
+        let dx = q.x - p.x, dy = q.y - p.y;
+        if ((m.rev && s < 2) || (!m.rev && s > m.L - 2)) { const r = m.path.getPointAtLength(clamp(s - step, 0, m.L)); dx = p.x - r.x; dy = p.y - r.y; }
+        // heading: x-scale follows cos(heading) so a truck "turns" round the ring instead of flipping;
+        // tilt is clamped to a realistic ramp grade
+        const len = Math.hypot(dx, dy) || 1, cx = dx / len;
+        if (Math.abs(dx) > .05) m.dir = dx > 0 ? 1 : -1;
+        const sx = m.dir * Math.max(.28, Math.abs(cx)) * m.scale;
+        const ang = clamp(Math.atan2(dy, Math.max(.05, Math.abs(dx))) * 180 / Math.PI, -12, 12);
+        m.g.setAttribute("transform", `translate(${p.x.toFixed(1)},${(p.y + m.lane).toFixed(1)}) scale(${sx.toFixed(3)},${m.scale}) rotate(${ang.toFixed(1)})`);
+        m.g.setAttribute("opacity", Math.min(1, t / .02, (1 - t) / .02).toFixed(2));
+      });
+    };
+    if (movers.length) {
+      if (REDUCED()) place(9000);
+      else { const loop = now => { place(now); VC.mov = requestAnimationFrame(loop); }; VC.mov = requestAnimationFrame(loop); }
+    }
     const setVB = v => { VC.vb = v; svgEl.setAttribute("viewBox", v.map(x => x.toFixed(1)).join(" ")); scene.classList.toggle("zoomed", v[2] < sc.w - 1); };
     // on phones the zoomed view uses a taller frame so a stage fills the screen
     const focusOf = id => {

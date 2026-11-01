@@ -770,3 +770,8 @@ table.vc-map tbody tr:last-child td, table.vc-map tr:has(+ tr.vc-first) td, tabl
 .vc-live-link:hover { text-decoration: underline; }
 @media (max-width: 640px) { .vc-scene:not(.zoomed) .vc-handm .hm-bg, .vc-scene:not(.zoomed) .vc-handm .hm-t { display: none; } }
 .vc-handm .hm-ring { pointer-events: none; }
+.sc-ramp { stroke: #6a5640; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.sc-ramp-berm { stroke: rgba(0,0,0,.28); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; transform: translateY(2px); }
+.sc-ramp-mark { stroke: rgba(255,255,255,.22); stroke-width: .8; }
+:root[data-theme="light"] .sc-ramp { stroke: #8a7255; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .sc-ramp { stroke: #8a7255; } }
