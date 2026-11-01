@@ -19,6 +19,7 @@ It is organised around one operating model, the **Field-to-Decision Transformati
 
 What you can explore:
 
+- **Value chain:** an animated cross-section of each business, from reservoir to export vessel and from pit to shipment. Every stage shows the data it produces (type, format, frequency, volume), a sample record, who consumes it, the business function it serves, and the hand-off check where trust usually breaks. Dark theme plays the night shift, light theme the day shift
 - **Framework:** an interactive map of the model, a goal tree, a stakeholder-layer table from frontline crews to leadership, governance maturity, and a *what-if* simulator that switches people, process or technology off to show what happens to trust and adoption
 - **Playbook:** normal and edge cases (good data nobody uses, everyone using wrong data, shadow spreadsheets, night-shift connectivity loss, safety-critical alarm tuning and more), each with symptom, data signal, root cause and resolution
 - **Replay:** watch the 90 days unfold, with the live pipeline animation, trust and adoption moving day by day
@@ -60,6 +61,7 @@ sqlite3 data/mining.db "SELECT failed_rules, COUNT(*) FROM quarantine_fms_haul_c
 
 ```
 governance/framework.yml     ← the transformation framework and playbook
+governance/valuechain.yml    ← physical value chain mapped to data, consumers and functions
 governance/contracts/*.yml   ← owners, freshness SLAs, quality rules (SQL predicates)
 governance/programme/*.yml   ← goal tree, stakeholder layers, RACI, stage gates, ADKAR, maturity
           │
