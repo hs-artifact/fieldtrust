@@ -361,6 +361,16 @@ V.overview = () => {
           .map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="big num" style="font-size:30px"><span data-count="${v}" data-dec="0">${fmtInt(v)}</span></div></div>`).join("")}
       </div>
       <p class="note" style="margin:14px 0 0">A record that breaks a blocking rule never reaches a KPI. It waits in quarantine with the rule IDs it broke, routed to a named data steward. <a href="#pipeline">Open the pipeline</a>.</p></div>
+  </section>
+  <section class="panel author">
+    ${panelHead("Built by Hendro S.", "15+ years across an international oil major, national upstream operators and open-pit coal mining. Balikpapan, Indonesia · open to Indonesia, Malaysia and the Middle East.")}
+    <div class="author-grid">
+      ${[["Senior Data Engineer, oil & gas", "pipeline", "Contract-driven medallion pipeline, rules as SQL, quarantine, tests gating every deploy"],
+         ["Petroleum / Hydrocarbon Data Analyst", "value-chain", "Well test → allocation → fiscal meter, reconciliation tolerance and money at stake"],
+         ["Digitalization Manager", "framework", "People, process and technology from one goal tree; adoption tracked against trust"]]
+        .map(([r, v, t]) => `<a class="author-role" href="#${v}"><b>${r}</b><span>${t}</span><i>Look here →</i></a>`).join("")}
+    </div>
+    <div class="author-contact"><a class="btn primary" href="mailto:hendro.sutrisno@outlook.com">hendro.sutrisno@outlook.com</a><a class="btn" href="https://www.linkedin.com/in/hendro-sutrisno-8b4897220" target="_blank" rel="noopener">LinkedIn</a><a class="btn" href="https://github.com/hs-artifact/fieldtrust" target="_blank" rel="noopener">Source on GitHub</a></div>
   </section>`;
 
   const ad7 = new Array(n).fill(null);

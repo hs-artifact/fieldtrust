@@ -805,3 +805,13 @@ table.vc-map tbody tr:last-child td, table.vc-map tr:has(+ tr.vc-first) td, tabl
 .vc-value-v { font: 600 24px/1 var(--f-display); color: var(--ink); }
 .vc-value-was { margin-left: auto; font: 500 13px var(--f-mono); color: var(--ink-3); }
 .vc-value-was .note { text-decoration: none; }
+
+/* author / hiring panel */
+.author-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.author-role { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink-2); text-decoration: none; background: var(--surface-2, transparent); transition: border-color .2s, transform .2s; }
+.author-role:hover { border-color: var(--accent); transform: translateY(-1px); }
+.author-role b { color: var(--ink); font-size: 14px; }
+.author-role span { font-size: 12.5px; line-height: 1.5; }
+.author-role i { font-style: normal; color: var(--accent); font-size: 12px; margin-top: auto; }
+.author-contact { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+@media (max-width: 760px) { .author-grid { grid-template-columns: minmax(0, 1fr); } }

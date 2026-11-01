@@ -12,6 +12,16 @@ Field reality → trusted data → decisions → adoption.
 
 **[Open the live demo →](https://hs-artifact.github.io/fieldtrust/#value-chain)**
 
+### For hiring managers: where to look
+
+| If you are hiring for | Start here | What it shows |
+|---|---|---|
+| **Senior Data Engineer, oil & gas** | [`pipeline/medallion.py`](pipeline/medallion.py), [`governance/contracts/`](governance/contracts), [`tests/`](tests) | Contract-driven bronze → silver → gold pipeline, rules as SQL predicates, quarantine, tests gating every deploy |
+| **Petroleum / Hydrocarbon Data Analyst** | [Value chain → Well](https://hs-artifact.github.io/fieldtrust/#value-chain) and [`governance/valuechain.yml`](governance/valuechain.yml) | Well test → allocation → fiscal meter hand-off, reconciliation tolerance, money at stake per month, PPDM/PRODML vocabulary |
+| **Digitalization / Digital Transformation Manager** | [Framework](https://hs-artifact.github.io/fieldtrust/#framework), [Stage gates](https://hs-artifact.github.io/fieldtrust/#transformation), [Adoption](https://hs-artifact.github.io/fieldtrust/#adoption) | People, process and technology designed from the same goals; requirement → acceptance → evidence; adoption tracked against data trust |
+
+**Hendro S.** · Balikpapan, Indonesia · open to roles in Indonesia, Malaysia and the Middle East · [hendro.sutrisno@outlook.com](mailto:hendro.sutrisno@outlook.com) · [LinkedIn](https://www.linkedin.com/in/hendro-sutrisno-8b4897220)
+
 ![Value chain, night shift: reservoir to export vessel, each stage mapped to its data](docs/img/value-chain-night.gif)
 
 <table>
@@ -131,7 +141,11 @@ The `app/` folder is a static site. The included GitHub Actions workflow (`.gith
 
 Built by **Hendro S.** ([hs-artifact](https://github.com/hs-artifact)): 15+ years across an international oil major, national upstream operators and large-scale open-pit coal mining, working at the point where operations, data, governance and people meet.
 
-The domain model, quality rules, acceptance criteria and adoption logic come from that field experience. The code was written with AI-assisted development.
+The domain model, quality rules, reconciliation tolerances, acceptance criteria and adoption logic come from that field experience. The code was written with AI-assisted development; every rule, test and number in it is one I can explain and defend.
+
+Background: Information Systems graduate who started as a Java developer, then application support and system engineering at an international oil major (SME for 187 applications through an operator transition), senior system and data engineer at national upstream operators (Oracle, SQL Server, PostgreSQL, Talend, PI Asset Framework), and head of digital operations at a large open-pit coal mine. PSPO I.
+
+**Contact:** [hendro.sutrisno@outlook.com](mailto:hendro.sutrisno@outlook.com) · [LinkedIn](https://www.linkedin.com/in/hendro-sutrisno-8b4897220) · Balikpapan, Indonesia (UTC+8)
 
 ## License
 
