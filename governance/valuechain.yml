@@ -1,0 +1,403 @@
+# FieldTrust value chain: the physical process mapped to the data it produces.
+# One entry per stage, in the order product moves through the business.
+# Data types drive the packet shapes in the app:
+#   time-series | event | document | geospatial
+# Systems are named by category, not vendor. All figures are typical orders of
+# magnitude for a mid-size operation, for illustration only.
+
+oil_gas:
+  title: Reservoir to export vessel
+  lede: Gas and condensate move from rock to ship through nine stages. Each stage produces its own data, at its own speed, for its own people. Trust breaks at the hand-offs, so that is where FieldTrust reconciles.
+  stages:
+    - id: reservoir
+      name: Reservoir
+      what: Gas and condensate sit in porous sandstone under a sealing cap rock, 2,500 to 4,000 m down. Nobody sees it directly, so every decision rests on indirect measurements.
+      assets: Seismic survey, well logs, cores, pressure surveys, static and dynamic reservoir models
+      data:
+        - { name: "Seismic volumes", type: "geospatial", source: "Seismic interpretation platform", format: "SEG-Y", frequency: "Per survey (4D every 2-5 yrs)", volume: "1-10 TB per survey" }
+        - { name: "Well logs", type: "geospatial", source: "Petrophysics database", format: "LAS / DLIS", frequency: "Per well", volume: "0.1-5 GB per well" }
+        - { name: "Pressure build-up tests", type: "time-series", source: "Well test database", format: "CSV / ASCII", frequency: "Per survey (quarterly)", volume: "MB" }
+        - { name: "Reservoir model", type: "geospatial", source: "Reservoir simulation", format: "Grid (RESCUE / GRDECL)", frequency: "Annual update", volume: "10-100 GB" }
+      sample:
+        system: Petrophysics database
+        record: |
+          ~Well  KST-07   ~Curve  DEPT.M  GR.API  RHOB.G/C3  NPHI.V/V
+          3184.5   48.2   2.31   0.19
+          3185.0   46.9   2.29   0.21   # gas crossover
+      consumers:
+        - { role: "Geoscientist", uses: "Maps structure, faults and sand bodies" }
+        - { role: "Reservoir engineer", uses: "Estimates reserves and forecasts decline" }
+        - { role: "Asset manager", uses: "Approves the field development plan" }
+      function: Reserves booking, field development planning and infill well targeting. The single largest capital decision in the chain starts here.
+      kpis: [Proven reserves (BCF), Recovery factor, Reserve replacement ratio, Forecast vs actual production]
+      risks:
+        - Depth datum and coordinate system differ between legacy and new surveys
+        - Log curves renamed or re-sampled with no lineage kept
+        - Model updated without the latest pressure data
+      handoff: { to: "Well", check: "Model forecast rates vs measured well rates" }
+
+    - id: well
+      name: Well
+      what: The wellbore links reservoir to surface. Once completed, the well flows through the wellhead and choke into a flowline. Pressure, temperature and choke position are the well's vital signs.
+      assets: Christmas tree, choke, downhole gauge, flowline, test separator
+      data:
+        - { name: "Wellhead pressure and temperature", type: "time-series", source: "SCADA to process historian", format: "OPC UA tags", frequency: "1 s - 1 min", volume: "~50 tags per well" }
+        - { name: "Well tests", type: "event", source: "Production database", format: "Test record", frequency: "Monthly per well", volume: "KB" }
+        - { name: "Daily allocated volumes", type: "document", source: "Production allocation", format: "Table (SQL)", frequency: "Daily", volume: "KB" }
+      sample:
+        system: Process historian (modelled in FieldTrust)
+        record: |
+          tag=KST-07.WHP  value=1842.6  unit=psi  quality=GOOD
+          ts=2026-10-31T03:00:00Z  choke_pct=46  wht_c=71.3
+      consumers:
+        - { role: "Production engineer", uses: "Optimises choke and spots decline" }
+        - { role: "Control room operator", uses: "Watches alarms and keeps wells online" }
+        - { role: "Reservoir engineer", uses: "Calibrates the model with real flow" }
+      function: Well surveillance, optimisation and allocation. Daily volumes per well drive reservoir decisions and partner reporting.
+      kpis: [Well uptime, Deferred production, Allocation factor, Well test compliance]
+      risks:
+        - bar/psi unit mix-up on new tags (FieldTrust rule OG-H-03)
+        - Frozen tag values reported as GOOD quality
+        - Well tests overdue, so allocation runs on stale rates
+      fieldtrust: [historian_well_hourly, daily_production_report]
+      handoff: { to: "Processing facility", check: "Sum of allocated well volumes vs plant inlet meter" }
+
+    - id: drilling-pipe
+      name: Drill string
+      what: A rotating string of steel pipe, up to 4 km long, drives the bit through rock. Sensors near the bit send measurements up the mud column while drilling.
+      assets: Drill pipe, bottom-hole assembly, MWD/LWD tools, mud motor, bit
+      data:
+        - { name: "MWD / LWD downhole data", type: "time-series", source: "Directional drilling service", format: "WITSML 2.0", frequency: "0.1-1 Hz (mud pulse)", volume: "50-200 MB per day" }
+        - { name: "Directional surveys", type: "geospatial", source: "Directional drilling service", format: "WITSML trajectory", frequency: "Every stand (~30 m)", volume: "KB" }
+        - { name: "Bit and BHA run record", type: "document", source: "Drilling database", format: "XML / PDF", frequency: "Per run", volume: "KB" }
+      sample:
+        system: Real-time WITSML feed
+        record: |
+          { "well": "KST-13", "md_m": 2861.4, "inc_deg": 38.2,
+            "azi_deg": 112.7, "gr_api": 61.0, "ts": "2026-10-31T03:12:05Z" }
+      consumers:
+        - { role: "Directional driller", uses: "Steers the bit to stay inside the target sand" }
+        - { role: "Geosteering geologist", uses: "Compares live logs with the model" }
+        - { role: "Remote operations centre", uses: "Watches for stuck pipe and vibration" }
+      function: Well placement and drilling safety. Data latency of minutes decides whether the well hits pay or misses it.
+      kpis: [Metres in target zone, Rate of penetration, Survey frequency compliance, Downhole tool failures]
+      risks:
+        - Mud-pulse telemetry drops out, leaving gaps in the log
+        - Depth mismatch between surface and downhole clocks
+        - Survey corrections (magnetic declination) applied twice or not at all
+      handoff: { to: "Rig", check: "Downhole depth vs surface measured depth" }
+
+    - id: rig
+      name: Drilling rig
+      what: The rig hoists, rotates and circulates. Surface sensors log every action of the crew, and the daily drilling report turns that into cost and progress.
+      assets: Derrick, top drive, draw-works, mud pumps, mud pits, BOP stack
+      data:
+        - { name: "Surface drilling parameters", type: "time-series", source: "Electronic drilling recorder", format: "WITS0 / WITSML", frequency: "1 Hz", volume: "~1 GB per day" }
+        - { name: "Daily drilling report", type: "document", source: "Drilling reporting system", format: "WITSML / XML", frequency: "Daily (06:00)", volume: "KB" }
+        - { name: "Non-productive time events", type: "event", source: "Drilling reporting system", format: "Coded events", frequency: "Per event", volume: "KB" }
+        - { name: "Permit to work and BOP tests", type: "document", source: "HSE system", format: "Form / PDF", frequency: "Per job", volume: "KB" }
+      sample:
+        system: Electronic drilling recorder
+        record: |
+          ts=03:12:05 hookload_klbf=212.4 wob_klbf=18.6 rpm=140
+          torque_kftlb=9.8 spp_psi=3120 pit_vol_bbl=486.2
+      consumers:
+        - { role: "Drilling superintendent", uses: "Tracks days vs plan and NPT" }
+        - { role: "Finance (AFE control)", uses: "Tracks well cost against approved budget" }
+        - { role: "HSE", uses: "Checks well-control readiness and permits" }
+      function: Drilling performance, cost control and well control. A rig day costs tens of thousands of dollars, so lost hours are measured to the minute.
+      kpis: [Days vs plan, Non-productive time %, Cost per metre, Kick and well-control events]
+      risks:
+        - Activity codes picked from habit rather than what actually happened
+        - Pit volume sensors drift, masking influx
+        - Report times out of sync with recorder timestamps
+      handoff: { to: "Well", check: "Well handover pack (completion, tests) accepted by production" }
+
+    - id: processing
+      name: Processing facility
+      what: Separators split gas, condensate and water. Gas is compressed, dehydrated and conditioned to sales specification. The flare takes what the plant cannot handle.
+      assets: Inlet separators, compressors, dehydration (TEG), dew-point control, flare stack, gas chromatograph
+      data:
+        - { name: "Process tags (DCS)", type: "time-series", source: "DCS to process historian", format: "OPC UA tags", frequency: "1 s", volume: "10,000-50,000 tags" }
+        - { name: "Alarms and events", type: "event", source: "Alarm management", format: "ISA-18.2 event log", frequency: "Per event", volume: "1,000s per day" }
+        - { name: "Gas composition", type: "time-series", source: "Online chromatograph and LIMS", format: "Analysis record", frequency: "Every 4-15 min", volume: "MB" }
+        - { name: "Maintenance work orders", type: "event", source: "Maintenance system (CMMS)", format: "Work order", frequency: "Per job", volume: "KB" }
+        - { name: "Shift log and handover", type: "document", source: "Operator logbook", format: "Text", frequency: "Per shift", volume: "KB" }
+      sample:
+        system: Online gas chromatograph
+        record: |
+          ts=03:10  C1=86.41%  C2=5.12%  CO2=2.84%  H2O=4.1 lb/MMscf
+          GHV=1068 BTU/scf  spec=PASS
+      consumers:
+        - { role: "Panel operator", uses: "Keeps the plant stable and on spec" }
+        - { role: "Process engineer", uses: "Tunes capacity, energy use and flaring" }
+        - { role: "Maintenance planner", uses: "Plans work on bad actors" }
+      function: Throughput, product specification, energy and flaring. This is where most real-time data lives and most alarms fire.
+      kpis: [Plant availability, Gas on spec %, Flaring volume, Alarms per operator-hour]
+      risks:
+        - Alarm floods hide the alarm that matters
+        - Chromatograph out of calibration but still trusted
+        - Work orders closed with no failure code
+      handoff: { to: "GTS", check: "Plant outlet meter vs pipeline inlet meter" }
+
+    - id: gts
+      name: Gas transmission (GTS)
+      what: A buried, high-pressure pipeline carries sales gas over tens to hundreds of kilometres. Compressor stations keep the pressure up; pigs clean and inspect the line.
+      assets: Trunk pipeline, compressor station, block valves, pig launcher and receiver, cathodic protection
+      data:
+        - { name: "Pipeline pressure and flow", type: "time-series", source: "SCADA (RTU)", format: "DNP3 / Modbus to historian", frequency: "1-15 s", volume: "100s of tags" }
+        - { name: "Leak detection alarms", type: "event", source: "Computational pipeline monitoring", format: "Event log", frequency: "Per event", volume: "KB" }
+        - { name: "In-line inspection runs", type: "geospatial", source: "Pipeline integrity system", format: "Feature list + GIS", frequency: "Every 3-5 years", volume: "10s of GB" }
+        - { name: "Daily nominations", type: "document", source: "Gas management system", format: "Nomination table", frequency: "Daily", volume: "KB" }
+      sample:
+        system: Pipeline SCADA
+        record: |
+          RTU=BV-04  P_in=78.4 barg  P_out=76.1 barg  Q=312.6 MMscfd
+          linepack=1,284 MMscf  ts=03:12:00
+      consumers:
+        - { role: "Gas controller", uses: "Balances line pack against nominations" }
+        - { role: "Integrity engineer", uses: "Plans digs and repairs from inspection data" }
+        - { role: "Regulator", uses: "Reviews pressure and leak records" }
+      function: Delivery against nominations and pipeline integrity. A missed nomination costs money; a missed leak costs much more.
+      kpis: [Nomination accuracy, Line pack, Leak detection response time, Integrity anomalies open]
+      risks:
+        - Communication loss from remote RTUs, data back-filled late
+        - Inspection features not aligned to GIS chainage
+        - Meter configuration changed without a record
+      handoff: { to: "Terminal", check: "Pipeline outlet vs terminal receipt meter (line balance)" }
+
+    - id: terminal
+      name: Terminal
+      what: Gas and condensate arrive at the coastal terminal. Condensate goes to storage tanks; gas is routed to the export system. Inventory is measured tank by tank.
+      assets: Receiving facilities, storage tanks, radar tank gauges, inventory system
+      data:
+        - { name: "Tank levels and temperatures", type: "time-series", source: "Tank gauging system", format: "Modbus to historian", frequency: "10-60 s", volume: "10s of tags per tank" }
+        - { name: "Daily stock report", type: "document", source: "Terminal management system", format: "Table / PDF", frequency: "Daily", volume: "KB" }
+        - { name: "Tank transfers", type: "event", source: "Terminal management system", format: "Transfer record", frequency: "Per transfer", volume: "KB" }
+      sample:
+        system: Terminal management system
+        record: |
+          tank=T-201  level_mm=11,842  temp_c=31.6  gsv_bbl=184,205
+          density_15c=742.1 kg/m3  ts=2026-10-31T06:00
+      consumers:
+        - { role: "Terminal operator", uses: "Plans receipts and tank switching" }
+        - { role: "Hydrocarbon accountant", uses: "Closes the daily stock balance" }
+        - { role: "Commercial", uses: "Confirms what is available to sell" }
+      function: Inventory and hydrocarbon accounting. Stock that cannot be reconciled becomes unexplained loss.
+      kpis: [Stock balance gain/loss %, Tank availability, Receipts vs plan]
+      risks:
+        - Gauges drift between calibrations
+        - Manual dips keyed in with the wrong tank ID
+        - Temperature correction tables out of date
+      handoff: { to: "Export station", check: "Terminal stock change vs fiscal export volume" }
+
+    - id: export
+      name: Export metering station
+      what: The fiscal meter is the cash register of the field. Every cubic metre sold is measured here to custody-transfer accuracy, and the numbers drive revenue, taxes and the production sharing split.
+      assets: Ultrasonic meters, flow computers, prover, chromatograph, loading arms
+      data:
+        - { name: "Fiscal flow and quality", type: "time-series", source: "Flow computers", format: "Modbus to metering supervisory system", frequency: "1 s (totalised hourly)", volume: "MB" }
+        - { name: "Daily fiscal report", type: "document", source: "Metering supervisory system", format: "Signed report (PDF + table)", frequency: "Daily", volume: "KB" }
+        - { name: "Meter verifications", type: "event", source: "Metering system", format: "Calibration certificate", frequency: "Monthly - annual", volume: "KB" }
+      sample:
+        system: Fiscal metering (modelled in FieldTrust)
+        record: |
+          date=2026-10-31  meter=FM-01  std_vol=8.412 MMSCM
+          energy=331,940 GJ  GHV=39.46 MJ/m3  status=VALIDATED
+      consumers:
+        - { role: "Commercial / gas sales", uses: "Invoices the buyer" }
+        - { role: "Production accountant", uses: "Computes entitlement and the government split" }
+        - { role: "Regulator and auditors", uses: "Verify the measured volumes" }
+      function: Custody transfer, revenue and the production sharing split. The most audited number in the business.
+      kpis: [Meter uncertainty, Allocation vs fiscal gap, Verification compliance, Disputed volumes]
+      risks:
+        - Wrong gas composition used for energy calculation
+        - Flow computer configuration changes not audited
+        - Late or missing daily report (FieldTrust freshness SLA)
+      fieldtrust: [fiscal_meter_daily]
+      handoff: { to: "Vessel", check: "Shore meter vs ship figures (bill of lading)" }
+
+    - id: vessel
+      name: Export vessel
+      what: Condensate and LNG cargoes are lifted at the jetty. Shore and ship measure the cargo independently, and the documents follow the cargo to the buyer.
+      assets: Tanker or LNG carrier, jetty, loading arms, independent surveyor
+      data:
+        - { name: "Lifting schedule and nomination", type: "document", source: "Marketing and shipping system", format: "Schedule / email", frequency: "Monthly + updates", volume: "KB" }
+        - { name: "Bill of lading and quality certificate", type: "document", source: "Independent surveyor", format: "Signed PDF", frequency: "Per cargo", volume: "KB" }
+        - { name: "Vessel position (AIS)", type: "geospatial", source: "AIS feed", format: "NMEA / API", frequency: "Every few minutes", volume: "MB" }
+        - { name: "Laytime and demurrage events", type: "event", source: "Shipping system", format: "Statement of facts", frequency: "Per cargo", volume: "KB" }
+      sample:
+        system: Cargo documents
+        record: |
+          cargo=KST-C-2610  vessel=MT Harbour Kite  BL_qty=412,880 bbl
+          shore_qty=413,102 bbl  diff=-0.05%  NOR=2026-10-30T22:40
+      consumers:
+        - { role: "Marketing and shipping", uses: "Schedules liftings and vessels" }
+        - { role: "Finance", uses: "Invoices cargo and settles demurrage" }
+        - { role: "Buyer", uses: "Accepts quantity and quality" }
+      function: Liftings, invoicing and claims. Days of waiting become demurrage; a large ship-shore gap becomes a claim.
+      kpis: [Ship-shore difference %, Demurrage days, Liftings on schedule, Invoice cycle time]
+      risks:
+        - Ship and shore use different temperature or density standards
+        - Statement of facts typed from paper, with errors
+        - Nomination changes not reflected in the plan
+      handoff: { to: "Buyer", check: "Invoice quantity = bill of lading quantity" }
+
+mining:
+  title: Pit to shipment
+  lede: Coal moves from the pit face to an ocean vessel through six stages. Each stage weighs, counts or samples the same tonnes in a different way. FieldTrust lines those measurements up so the tonnes agree.
+  stages:
+    - id: pit
+      name: Pit
+      what: Overburden is drilled, blasted and removed by excavator and haul truck to expose the coal seam. The coal is then loaded and sent to the ROM pad.
+      assets: Excavators, haul trucks, drill rigs, dozers, geology block model, survey drone
+      data:
+        - { name: "Haul cycles (load, haul, dump, queue)", type: "event", source: "Fleet management system (FMS)", format: "Cycle record (SQL / API)", frequency: "Per cycle (~25-40 min)", volume: "5,000-15,000 cycles per day" }
+        - { name: "Truck position and speed", type: "geospatial", source: "FMS high-precision GPS", format: "Position stream", frequency: "1-5 s", volume: "GB per day" }
+        - { name: "Drill and blast records", type: "event", source: "Drill navigation system", format: "Hole log (CSV)", frequency: "Per hole", volume: "MB" }
+        - { name: "Block model and survey", type: "geospatial", source: "Mine planning system", format: "Block model + point cloud (LAS)", frequency: "Weekly survey, monthly model", volume: "GB" }
+      sample:
+        system: Fleet management (modelled in FieldTrust)
+        record: |
+          { "truck": "HT-118", "loader": "EX-07", "material": "COAL",
+            "payload_t": 96.4, "load_ts": "03:02:11", "dump": "ROM-2" }
+      consumers:
+        - { role: "Dispatcher", uses: "Assigns trucks to loaders in real time" }
+        - { role: "Mine planner", uses: "Checks plan compliance and strip ratio" }
+        - { role: "Pit superintendent", uses: "Reviews shift productivity" }
+      function: Productivity and plan compliance. Every truck cycle is money moving, and FMS is the system of record for it.
+      kpis: [BCM moved per hour, Strip ratio, Truck cycle time, Plan compliance %]
+      risks:
+        - Payload sensors not calibrated, inflating tonnes
+        - Cycles missed when GPS drops in deep benches
+        - Material type assigned wrongly at the loader
+      fieldtrust: [fms_haul_cycles]
+      handoff: { to: "ROM", check: "FMS dumped tonnes vs ROM stockpile survey" }
+
+    - id: rom
+      name: ROM stockpile
+      what: Run-of-mine coal is dumped on stockpiles by quality. Samples set the calorific value, ash and sulphur, so the planner can blend to the buyer's specification.
+      assets: ROM pad, stockpiles, wheel loaders, sampling station
+      data:
+        - { name: "Stockpile tonnage in/out", type: "event", source: "Stockpile management system", format: "Movement record", frequency: "Per movement", volume: "KB" }
+        - { name: "Coal quality samples", type: "document", source: "Laboratory (LIMS)", format: "Analysis certificate", frequency: "Per lot / shift", volume: "KB" }
+        - { name: "Stockpile volume survey", type: "geospatial", source: "Drone survey", format: "Point cloud + surface", frequency: "Weekly", volume: "GB" }
+      sample:
+        system: Laboratory (LIMS)
+        record: |
+          lot=ROM2-1031-N  CV_gar=4,212 kcal/kg  TM=34.1%
+          ash=6.8%  TS=0.42%  status=APPROVED
+      consumers:
+        - { role: "Quality control", uses: "Releases coal by specification" }
+        - { role: "Mine planner", uses: "Plans the blend for the next shipment" }
+        - { role: "Finance", uses: "Values inventory" }
+      function: Blending and inventory. Off-spec coal is discounted or rejected, so quality data is as important as tonnes.
+      kpis: [Stockpile inventory (t), Blend on spec %, Survey vs book variance, Lab turnaround time]
+      risks:
+        - Survey and book stock disagree with no adjustment process
+        - Sample lot not linked to the right stockpile
+        - Lab results arrive after the coal has moved
+      handoff: { to: "Hauling", check: "ROM dispatched tonnes vs WIM tickets" }
+
+    - id: hauling
+      name: Coal hauling
+      what: Road trucks carry coal from the ROM over a private haul road to the port, day and night. Weigh-in-motion bridges weigh every truck; fatigue cameras watch every driver.
+      assets: Haul road, road trucks, weigh-in-motion bridges, fatigue monitoring, dispatch
+      data:
+        - { name: "Weigh-in-motion tickets", type: "event", source: "WIM system", format: "Ticket record", frequency: "Per truck pass", volume: "2,000-6,000 per day" }
+        - { name: "Driver fatigue alerts", type: "event", source: "Fatigue monitoring (in-cab camera)", format: "Alert + video clip", frequency: "Per event", volume: "MB per alert" }
+        - { name: "Truck telematics", type: "geospatial", source: "Telematics", format: "Position stream", frequency: "10-30 s", volume: "MB per day" }
+      sample:
+        system: Weigh-in-motion (modelled in FieldTrust)
+        record: |
+          ticket=WIM2-884213  truck=RT-0451  gross_t=72.6
+          tare_t=27.9  net_t=44.7  speed_kph=11  ts=03:14:52
+      consumers:
+        - { role: "Hauling contractor", uses: "Gets paid per tonne-km" }
+        - { role: "Safety officer", uses: "Follows up fatigue alerts during the shift" }
+        - { role: "Logistics planner", uses: "Matches hauling rate to port capacity" }
+      function: Contractor payment, road safety and logistics. Night shift is where fatigue risk peaks and where data matters most.
+      kpis: [Tonnes hauled per day, WIM vs FMS gap %, Fatigue alerts per 1,000 km, Cycle time ROM to port]
+      risks:
+        - WIM loadcells drift (FieldTrust intervention)
+        - Duplicate tickets when trucks stop on the bridge
+        - Fatigue false alarms erode trust in the system
+      fieldtrust: [wim_tickets, fatigue_alerts]
+      handoff: { to: "Port", check: "WIM net tonnes vs port intake weighbridge" }
+
+    - id: port
+      name: Port stockyard
+      what: Trucks tip into the port receiving hopper or onto port stockpiles. The port holds a buffer so barges can load without waiting for trucks.
+      assets: Receiving hopper, port stockpiles, stacker, intake weighbridge
+      data:
+        - { name: "Intake weighbridge tickets", type: "event", source: "Port weighbridge", format: "Ticket record", frequency: "Per truck", volume: "1,000s per day" }
+        - { name: "Port stock by quality", type: "document", source: "Port stockyard system", format: "Stock table", frequency: "Per shift", volume: "KB" }
+        - { name: "Stockpile survey", type: "geospatial", source: "Drone survey", format: "Point cloud", frequency: "Weekly / pre-shipment", volume: "GB" }
+      sample:
+        system: Port stockyard system
+        record: |
+          pile=P-04  quality=GAR4200  book_t=61,420  survey_t=60,880
+          variance=-0.88%  updated=2026-10-31T06:00
+      consumers:
+        - { role: "Port superintendent", uses: "Plans receiving and stacking" }
+        - { role: "Shipping coordinator", uses: "Confirms coal ready for the next barge" }
+        - { role: "Finance", uses: "Reconciles stock at month end" }
+      function: Buffer stock and logistics. The port is where mine-side tonnes meet sea-side tonnes.
+      kpis: [Port stock (t), Book vs survey variance, Truck turnaround at hopper, Days of cover]
+      risks:
+        - Weighbridge and WIM disagree, with no owner for the difference
+        - Stock moved between piles without a record
+        - Rain changes moisture, so tonnes shift on paper
+      handoff: { to: "Crushing plant", check: "Stock drawdown vs crusher feed belt scale" }
+
+    - id: crushing
+      name: Crushing plant
+      what: The crusher sizes coal to the contract top-size, typically under 50 mm. Belt scales weigh the flow; magnets and metal detectors protect the crusher and the buyer.
+      assets: Feeder, crusher, conveyors, belt scales, metal detector, PLC and SCADA
+      data:
+        - { name: "Belt scale throughput", type: "time-series", source: "Plant PLC / SCADA", format: "OPC UA tags", frequency: "1 s", volume: "100s of tags" }
+        - { name: "Crusher motor and vibration", type: "time-series", source: "Condition monitoring", format: "Tags + spectra", frequency: "1 s - 1 min", volume: "MB" }
+        - { name: "Stoppages and delays", type: "event", source: "Plant delay accounting", format: "Delay record", frequency: "Per event", volume: "KB" }
+        - { name: "Size distribution samples", type: "document", source: "Laboratory", format: "Sieve analysis", frequency: "Per shift", volume: "KB" }
+      sample:
+        system: Plant SCADA
+        record: |
+          ts=03:12:00  BS-01.rate=1,412 t/h  CR-01.amps=284 A
+          vib_mm_s=4.1  MD-01.trips_shift=2  top_size_mm=48
+      consumers:
+        - { role: "Plant operator", uses: "Keeps feed steady and clears blockages" }
+        - { role: "Maintenance engineer", uses: "Plans liner and bearing changes" }
+        - { role: "Quality control", uses: "Checks size against contract" }
+      function: Throughput, availability and product size. An unplanned crusher stop holds up the barge, and the barge holds up the ship.
+      kpis: [Throughput (t/h), Plant availability %, Unplanned stops per week, Size on spec %]
+      risks:
+        - Belt scales out of calibration (span drift)
+        - Delay reasons left as "other"
+        - Tag names differ between PLC and historian
+      handoff: { to: "Shipment", check: "Belt scale tonnes vs barge draft survey" }
+
+    - id: shipment
+      name: Barge and vessel
+      what: A conveyor feeds the barge loader. Tugs tow the barges to an ocean vessel at the anchorage, where floating cranes trans-ship the coal. The draft survey on the vessel sets the invoiced tonnes.
+      assets: Barge loading conveyor, barges and tugs, floating crane, ocean vessel, independent surveyor
+      data:
+        - { name: "Barge loading tonnes", type: "time-series", source: "Loadout belt scale", format: "Tags + totaliser", frequency: "1 s (per barge total)", volume: "MB" }
+        - { name: "Draft survey and certificate of analysis", type: "document", source: "Independent surveyor", format: "Signed PDF", frequency: "Per barge / vessel", volume: "KB" }
+        - { name: "Vessel and barge position", type: "geospatial", source: "AIS and tug tracking", format: "NMEA / API", frequency: "Every few minutes", volume: "MB" }
+        - { name: "Royalty and export declaration", type: "document", source: "Government portal", format: "Online form", frequency: "Per shipment", volume: "KB" }
+      sample:
+        system: Cargo documents
+        record: |
+          vessel=MV Coral Wren  barges=8  belt_t=58,940  draft_t=58,612
+          diff=-0.56%  GAR=4,205 kcal/kg  BL=2026-10-31
+      consumers:
+        - { role: "Marketing", uses: "Meets the contract laycan and quality" }
+        - { role: "Finance", uses: "Invoices the buyer and pays royalty" }
+        - { role: "Buyer", uses: "Accepts the cargo against the certificate" }
+      function: Revenue, royalty and contract compliance. Invoiced tonnes come from the draft survey, so every upstream number is measured against it.
+      kpis: [Shipped tonnes, Belt vs draft difference %, Demurrage days, Quality claims]
+      risks:
+        - Belt and draft survey differ beyond tolerance with no root cause
+        - Certificate figures re-typed into the invoice by hand
+        - Barge waiting time not captured until the claim arrives
+      handoff: { to: "Buyer", check: "Invoice tonnes = draft survey tonnes" }
