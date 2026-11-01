@@ -15,6 +15,14 @@ Most digital programmes in heavy industry rarely fail on technology. They fail o
 | **Digital operations** | 24×7 source monitoring, SLA against target, incidents raised by the rule engine, MTTR, runbook |
 | **Transformation & change** | Requirement → acceptance → evidence stage gates, ADKAR by user group, stakeholder map, adoption tied to trust |
 
+It is organised around one operating model, the **Field-to-Decision Transformation Framework**: strategy and goals set the direction; people, process and technology are designed together from the same goals and pain points; governance binds them; data underpins every decision, both *data for decisions* (baselines, pain points, adoption) and *data from technology* (on purpose, on time, relevant, trusted); and value is tracked back to the strategic result.
+
+What you can explore:
+
+- **Framework:** an interactive map of the model, a goal tree, a stakeholder-layer table from frontline crews to leadership, governance maturity, and a *what-if* simulator that switches people, process or technology off to show what happens to trust and adoption
+- **Playbook:** normal and edge cases (good data nobody uses, everyone using wrong data, shadow spreadsheets, night-shift connectivity loss, safety-critical alarm tuning and more), each with symptom, data signal, root cause and resolution
+- **Replay:** watch the 90 days unfold, with the live pipeline animation, trust and adoption moving day by day
+
 Two domain packs run on the same core:
 
 - **Kestrel Gas Field (oil & gas):** 12 wells, process historian, daily production report, fiscal export meter
@@ -51,7 +59,9 @@ sqlite3 data/mining.db "SELECT failed_rules, COUNT(*) FROM quarantine_fms_haul_c
 ## How it works
 
 ```
+governance/framework.yml     ← the transformation framework and playbook
 governance/contracts/*.yml   ← owners, freshness SLAs, quality rules (SQL predicates)
+governance/programme/*.yml   ← goal tree, stakeholder layers, RACI, stage gates, ADKAR, maturity
           │
 pipeline/generate.py         → bronze: raw synthetic source systems with realistic defects
 pipeline/medallion.py        → staging SQL, rule engine, silver + quarantine, gold SQL
