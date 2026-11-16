@@ -414,9 +414,9 @@ V.pipeline = () => {
   const rows = d.datasets.map(ds => `
     <div class="node"><div class="t">${esc(ds.meta.source_system)}</div><div class="s">${esc(ds.meta.grain)}</div></div>
     <div class="arrow">${arrowSvg()}</div>
-    <div class="node bronze"><div class="s mono">bronze.${esc(ds.name)}</div><div class="c num">${fmtInt(ds.bronze)}</div></div>
+    <div class="node bronze"><div class="s mono">bronze.<wbr>${esc(ds.name).replace(/_/g, "_<wbr>")}</div><div class="c num">${fmtInt(ds.bronze)}</div></div>
     <div class="arrow">${arrowSvg()}</div>
-    <div class="node silver"><div class="s mono">silver.${esc(ds.name)}</div><div class="split"><span class="c num">${fmtInt(ds.silver)}</span><span class="q num" title="Quarantined">${fmtInt(ds.quarantined)} quarantined</span></div>
+    <div class="node silver"><div class="s mono">silver.<wbr>${esc(ds.name).replace(/_/g, "_<wbr>")}</div><div class="split"><span class="c num">${fmtInt(ds.silver)}</span><span class="q num" title="Quarantined">${fmtInt(ds.quarantined)} quarantined</span></div>
       <div class="s">${ds.meta.primary_key.map(k => `<span class="chip">${esc(k)}</span>`).join(" ")} · ${(c => c + (c === 1 ? " rule" : " rules"))(d.rules.filter(r => r.dataset === ds.name).length)}</div></div>
     <div class="arrow">${arrowSvg()}</div>`).join("");
   const gold = `<div class="node gold gold-span" style="grid-row:2 / span ${d.datasets.length}"><div class="s mono">gold.gold_daily</div><div class="c num">${d.gold.length} days</div>
@@ -604,7 +604,7 @@ V.operations = () => {
     ${tile("Open", open, "", open ? "in monitoring after fix" : "none")}
   </section>
   <section class="grid g-21">
-    <div class="panel">${panelHead("Availability by month", "Average across all sources and the pipeline. Dashed line is the SLA target.", `<div class="legend"><span><i class="sq" style="background:var(--s1)"></i>Availability</span><span><i class="dash"></i>${o.sla_target}% target</span></div>`)}<div class="chart" id="c-sla"></div></div>
+    <div class="panel">${panelHead("Availability by month", "Average across all sources and the pipeline. Dashed line is the SLA target; the axis starts at 96%.", `<div class="legend"><span><i class="sq" style="background:var(--s1)"></i>Availability</span><span><i class="dash"></i>${o.sla_target}% target</span></div>`)}<div class="chart" id="c-sla"></div></div>
     <div class="panel">${panelHead("Runbook: rule-engine incident", "First 30 minutes on any shift.")}
       <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;color:var(--ink-2);font-size:13px">
         <li>Check the quarantine sample for the failing rule ID and the affected source.</li>
@@ -627,7 +627,7 @@ V.operations = () => {
         <text x="${cx}" y="${Y(r.availability) - 6}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${fmt(r.availability, 2)}%</text>
         <text x="${cx}" y="${H - 8}" text-anchor="middle">${mLabel(r.month)}</text></g>`; });
     s += `<line x1="${m.l}" x2="${m.l + iw}" y1="${Y(o.sla_target)}" y2="${Y(o.sla_target)}" style="stroke:var(--accent)" stroke-dasharray="5 4" stroke-width="1.5"/>`;
-    s += `<text x="${m.l + iw}" y="${m.t + 4}" text-anchor="end" style="fill:var(--ink-3)">axis starts at 96%</text></svg>`;
+    s += `</svg>`;
     host.innerHTML = s;
   };
   return [html, after];
@@ -716,7 +716,7 @@ V["case-study"] = () => {
   const precA = mean(mn.gold.slice(0, 40).map(g => g.fatigue_precision_pct)), precB = last7(mn.gold.map(g => g.fatigue_precision_pct));
   const html = `
   <section class="hero" style="grid-template-columns:1fr">
-    <div><div class="eyebrow">Case study · Hendro S. · hs-artifact</div>
+    <div><div class="eyebrow">Case study by Hendro Sutrisno</div>
       <p class="quote" style="margin-top:12px">“If it doesn’t work at 3 AM on night shift, <span>it doesn’t work.</span>”</p>
       <p class="lede">Most digital programmes in heavy industry fail on untrusted data, unclear ownership and systems that never get accepted on site, rarely on technology. FieldTrust is a working model of how I close that gap: data engineering, governance, operations and change management in one product, applied to an oil &amp; gas field and an open-pit mine.</p></div>
   </section>
