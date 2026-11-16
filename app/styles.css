@@ -805,3 +805,74 @@ table.vc-map tbody tr:last-child td, table.vc-map tr:has(+ tr.vc-first) td, tabl
 .vc-value-v { font: 600 24px/1 var(--f-display); color: var(--ink); }
 .vc-value-was { margin-left: auto; font: 500 13px var(--f-mono); color: var(--ink-3); }
 .vc-value-was .note { text-decoration: none; }
+
+/* ==== Refresh 2026-11: one grotesk family, sentence case, quieter accent ==== */
+:root,[data-theme="dark"],[data-theme="light"]{
+  --f-display:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:4px}
+body{font-feature-settings:"ss01" 0;letter-spacing:0}
+.brand-name,
+.brand-sub,
+.nav-group,
+.site-name,
+.trust-chip .lbl,
+.eyebrow,
+.h1,
+.h2,
+.gauge-card .cap,
+.tile .lbl,
+th,
+.tag-ppt,
+.move h3,
+.flow-h,
+.dim .lbl,
+.stages div,
+.tr-item h3,
+.pi .q,
+.cs h3,
+.quote,
+.lbl-sm,
+.fw-name,
+.fw-loop span,
+.fw-dq,
+.tgl b,
+.gt-ot,
+.qd-k,
+.pb h3,
+.pb-ex span,
+.vc-card h3,
+.vc-sub,
+.vc-value-h{text-transform:none!important;letter-spacing:0!important}
+.brand-sub,
+.nav-group,
+.trust-chip .lbl,
+.eyebrow,
+.gauge-card .cap,
+.tile .lbl,
+th,
+.tag-ppt,
+.flow-h,
+.dim .lbl,
+.stages div,
+.pi .q,
+.lbl-sm,
+.fw-loop span,
+.qd-k,
+.pb-ex span,
+.vc-sub,
+.vc-value-h{font-family:var(--f-body)!important}
+.h1{font-weight:800!important;letter-spacing:-.03em!important;line-height:1.05!important}
+.h2{font-weight:700!important;letter-spacing:-.02em!important}
+.brand-name{font-weight:800;letter-spacing:-.02em!important;font-size:1.12rem}
+.brand-sub{font-size:.78rem!important;opacity:.8}
+.eyebrow{font-size:.9rem!important;font-weight:500!important;color:var(--ink-3)!important}
+.nav-group{font-size:.8rem!important;font-weight:500!important}
+.tile .lbl,.gauge-card .cap,.dim .lbl,.lbl-sm,.trust-chip .lbl,.vc-sub,.vc-value-h,.qd-k,.flow-h,th{font-size:.82rem!important;font-weight:500!important}
+.btn{border-radius:4px}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.primary:hover{transform:none;opacity:.88}
+.btn:hover{border-color:var(--ink-3)}
+.num,.lede b,.tile .v,.gauge-card b{font-variant-numeric:proportional-nums!important}
+.site-meta,.thesis,.thesis b,.thesis i,.move-top .when,.move-top .marker{font-family:var(--f-body)!important}
+.thesis b{font-weight:600}
